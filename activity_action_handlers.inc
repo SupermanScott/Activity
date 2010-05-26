@@ -183,8 +183,8 @@ abstract class ActivityActionHandler {
    */
   public function determineNid($objects) {
     $nid = NULL;
-    if (isset($context['node']->nid)) {
-      $nid = $context['node']->nid;
+    if (isset($objects['node']->nid)) {
+      $nid = $objects['node']->nid;
     }
   
     // NOTICE: no elseif(). This is because if the comment is part of the

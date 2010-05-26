@@ -159,6 +159,16 @@ function activity_record($object, $context, $a1, $a2) {
           drupal_write_record('activity_targets', $target_record);
         }
       }
+      foreach (activity_get_grants($record) as $realm => $values) {
+        foreach ($values as $value) {
+          $row = array(
+            'aid' => $record['aid'],
+            'realm' => $realm,
+            'value' => $value,
+          );
+          drupal_write_record('activity_access', $row);
+        }
+      }
     }
   }
 }
@@ -169,7 +179,11 @@ function activity_record($object, $context, $a1, $a2) {
 function node_activity_api() {
   return array(
     'api' => '3-alpha',
-    'realms' => array('node_author' => 'Node Author'),
+    'realms' => array(
+      'node_author' => array(
+        'name' => 'Node Author',
+      ),
+    ),
     'hooks' => array(
       'node_insert' => array(
         'batch' => TRUE,
@@ -177,6 +191,7 @@ function node_activity_api() {
         'name' => 'Node Insert',
       ),
     ),
+    'file' => drupal_get_path('module', 'activity') . '/modules/node.activity.inc',
   );
 }
 
@@ -207,6 +222,41 @@ function activity_enabled_languages() {
   return $languages[1];
 }
 
+/**
+ * Return all the grants for a given activity.
+ *
+ * @param stdClass $record
+ * the database record for the activity table
+ *
+ * @return array
+ * The grant records for this activity
+ * 
+ */
+function activity_get_grants($record) {
+  $files = &drupal_static(__FUNCTION__, array());
+  $record = (object) $record;
+  $grants = array();
+  $realms = activity_cache_get('realms');
+
+  foreach ($realms as $realm_id => $information) {
+    if (isset($information['file']) && !isset($files[$information['file']])) {
+      $files[$information['file']] = TRUE;
+      require_once './' . $information['file'];
+    }
+
+    $module_grants = module_invoke($information['module'], 'activity_grants', $record);
+    foreach ($module_grants as $realm => $values) {
+      if (in_array($realm, array_keys($realms))) {
+        $grants[$realm] = $values;
+      }
+    }
+  }
+  // allow other modules to override what is recorded
+  drupal_alter('activity_access_records', $grants, $record);
+
+  return $grants;
+}
+
 // CRUD Functions
 function activity_cache_get($type) {
   $api_information = activity_cache_api_load();
@@ -216,13 +266,25 @@ function activity_cache_get($type) {
 function activity_cache_api_load() {
   $info_cache = &drupal_static(__FUNCTION__);
   if (empty($info_cache)) {
-    $info_cache = array('realms' => array(), 'hooks' => array());
+    $info_cache = array('realms' => array(), 'hooks' => array(), 'all_realms' => array());
     foreach (module_implements('activity_api') as $module) {
       $module_result = module_invoke($module, 'activity_api');
       // @TODO: use version_compare: http://php.net/manual/en/function.version-compare.php
       if ($module_result['api'] == '3-alpha') {
+        foreach ($module_result['realms'] as $realm => $data) {
+          $module_result['realms'][$realm] += array('module' => $module, 'file' => $module_result['file']);
+        }
+
         $info_cache['hooks'] += $module_result['hooks'];
         $info_cache['realms'] += $module_result['realms'];
+        $info_cache['all_realms'] += $module_result['realms'];
+      }
+
+      $enabled_realms = variable_get('activity_access_realms', array('node_author'));
+      if (!empty($enabled_realms)) {
+        foreach (array_diff(array_keys($info_cache['realms']), $enabled_realms) as $key) {
+          unset($info_cache['realms'][$key]);
+        }
       }
     }
     drupal_alter('activity_api', $info_cache);
