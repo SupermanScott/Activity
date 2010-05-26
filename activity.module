@@ -107,7 +107,7 @@ function activity_handler_load($aid) {
     $handler->options = $action_record->options;
     $handler->actions_id = $action_record->aid;
     $handler->label = $action_record->label;
-    dpm($handler);
+
     return $handler;
   }
   return FALSE;

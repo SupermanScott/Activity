@@ -70,7 +70,6 @@ function activity_admin_overview() {
             ON a.aid = ta.aid
           WHERE a.type = 'activity'";
   $results = db_query($sql)->fetchAll();
-  dpm($results);
   if (!empty($results)) {
     return '';
     return theme('activity_settings_actions_list');
@@ -141,7 +140,6 @@ function activity_configure_handler_form($form, $form_state, ActivityActionHandl
  * Form submit handler for the configuration form.
  */
 function activity_configure_handler_form_submit($form, &$form_state) {
-  dpm(func_get_args());
   $params = array(
     'aid' => $form['#actions_id'],
     'options' => $form_state['values']['options'],
