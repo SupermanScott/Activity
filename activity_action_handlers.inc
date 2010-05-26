@@ -1,0 +1,310 @@
+<?php
+// $Id: $
+
+/**
+ * @ingroup activity handlers
+ * @{
+ */
+abstract class ActivityActionHandler {
+  /**
+   * Templates created by the administrator.
+   *
+   * @var array
+   */
+  public $templates = array();
+
+  /**
+   * Options provided vai the optionsFrom and optionsDefinition methods.
+   *
+   * @var array
+   */
+  public $options = array();
+
+  /**
+   * Type of activity.
+   *
+   * @var string
+   */
+  public $type = 'activity';
+
+  /**
+   * {actions}.aid for the template.
+   *
+   * @var integer
+   */
+  public $actions_id = 0;
+
+  /**
+   * {actions}.label for the template.
+   *
+   * @var string
+   */
+  public $label;
+
+  /**
+   * Load objects for tokenization.
+   *
+   * @param &$objects
+   *   An array of objects.
+   *
+   * @return array
+   *  
+   */
+  public function loadObjects($context) {
+    $objects = array();
+    if (isset($context['account'])) {
+      $objects['user'] = $context['account'];
+    }
+
+    return $objects;
+  }
+
+  /**
+   * Return option defaults and structure.
+   *
+   * @return array.
+   */
+  public function optionDefinition() {
+  }
+
+  /**
+   * Display an FAPI form.
+   *
+   * @param &$form
+   *   An FAPI form array.
+   * @param $form_state
+   *   The form_state from FAPI.
+   */
+  public function optionForm(&$form, $form_state) {
+  }
+
+  /**
+   * Determine if the current Action is valid for this object.
+   *
+   * @param array $objects
+   *   The collection of objects for this action.
+   *
+   * @return boolean
+   */
+  public function valid($objects) {
+    return TRUE;
+  }
+
+  /**
+   * Display the token message form.
+   *
+   * @param &$form
+   *   The FAPI form.
+   * @param $form_state
+   *   The state of the form.
+   */
+  public function messagesForm(&$form, $form_state) {
+    $messages = $this->messages();
+    foreach (activity_enabled_languages() as $id => $language) {
+      $form[$id] = array(
+        '#type' => 'fieldset',
+        '#title' => t('@name messages', array('@name' => $language->name)),
+      );
+      foreach ($messages as $object_key => $information) {
+        $form[$id][$object_key] = array(
+          '#type' => 'textarea',
+          '#title' => t($information['title']),
+          '#description' => t($information['description']),
+          '#default_value' => $this->templates[$id][$object_key],
+        );
+      }
+    }
+    $form['token_help'] = array(
+      '#theme' => 'token_tree',
+      '#token_types' => array_keys($messages),
+    );
+  }
+
+  /**
+   * Return an array of message types.
+   */
+  protected function messages() {
+    return array(
+      'public' => array(
+        'title' => 'Public Message',
+        'description' => 'Message displayed to everyone who is not a part of this Activity',
+      ),
+    );
+  }
+
+  /**
+   * Tokenize based on the provided objects
+   *
+   * @param array $objects
+   *  The objects used in the tokenization process.
+   *
+   * @return array
+   *  An array of messages keyed by language and uid.
+   */
+  public function tokenize($objects) {
+    $messages = array();
+    foreach ($this->templates as $language_id => $language_patterns) {
+      foreach ($language_patterns as $target_key => $text) {
+        // @TODO: pass in the language object.
+        $message = token_replace($text, $objects, array('clear' => TRUE, 'sanitize' => FALSE));
+        if (!empty($message)) {
+          $messages[$language_id][$this->get_uid($target_key, $objects)] = $message;
+        }
+      }
+    }
+
+    return $messages;
+  }
+
+  /**
+   * Return the user id that matches the provided key in the templates.
+   *
+   * @param string $key
+   *   The message key.
+   * @param array $objects
+   *   All the objects for the Activity.
+   *
+   * @return int
+   */
+  protected function get_uid($key, $objects) {
+    if ($key == 'public') {
+      return 0;
+    }
+    return $objects[$key]->uid;
+  }
+
+  /**
+   * Return the nid of this Activity.
+   *
+   * @param array $objects
+   *  An array of objects used in tokenization.
+   *
+   * @return int / NULL
+   */
+  public function determineNid($objects) {
+    $nid = NULL;
+    if (isset($context['node']->nid)) {
+      $nid = $context['node']->nid;
+    }
+  
+    // NOTICE: no elseif(). This is because if the comment is part of the
+    // objects, use that as the basis for the nid. Doubt that will ever be an
+    // issue.
+    if (isset($objects['comment']->nid)) {
+      $nid = $objects['comment']->nid;
+    }
+
+    return $nid;
+  }
+
+  /**
+   * Return the eid field for this Activity.
+   *
+   * @param array $objects
+   *  The objects used in tokenization
+   *
+   * @return int / NULL
+   */
+  public function determineEid($objects) {
+    return NULL;
+  }
+
+  /**
+   * Return the uid that is responsible for this action.
+   *
+   * @param array $objects
+   *  The objects used in tokenization
+   *
+   * @return int
+   */
+  public function determineActor($objects) {
+    return $GLOBALS['user']->uid;
+  }
+}
+
+/**
+ * Activity handler for node module.
+ */
+class NodeActivityActionHandler extends ActivityActionHandler {
+  /**
+   * Return the eid field for this Activity.
+   *
+   * @param array $objects
+   *  The objects used in tokenization
+   *
+   * @return int / NULL
+   */
+  public function determineEid($objects) {
+    return $objects['node']->nid;
+  }
+
+  /**
+   * Return the uid that is responsible for this action.
+   *
+   * @param array $objects
+   *  The objects used in tokenization
+   *
+   * @return int
+   */
+  public function determineActor($objects) {
+    return $objects['node']->uid;
+  }
+
+  /**
+   * Load objects for tokenization.
+   *
+   * @param &$objects
+   *   An array of objects.
+   *
+   * @return array
+   *  
+   */
+  public function loadObjects($context) {
+    $objects = parent::loadObjects($context);
+    $objects['user'] = $GLOBALS['user'];
+    $objects['node'] = $context['node'];
+
+    return $objects;
+  }
+
+  /**
+   * Display an FAPI form.
+   *
+   * @param &$form
+   *   An FAPI form array.
+   * @param $form_state
+   *   The form_state from FAPI.
+   */
+  public function optionForm(&$form, $form_state) {
+    parent::optionForm($form, $form_state);
+    $node_types = array();
+
+    foreach (node_type_get_types() as $type) {
+      $node_types[$type->type] = check_plain($type->name);
+    }
+
+    $form['types'] = array(
+      '#type' => 'checkboxes',
+      '#title' => t('Allowed Node Types'),
+      '#options' => $node_types,
+      '#default_value' => $this->options['types'],
+    );
+  }
+
+  /**
+   * Return an array of message types.
+   */
+  protected function messages() {
+    $messages = parent::messages();
+    $messages['node'] = array(
+      'title' => 'Node Author',
+      'description' => 'Author of the node or the user who updated the node',
+    );
+
+    return $messages;
+  }
+}
+
+/**
+ * @} End of "ingroup activity handlers".
+ */

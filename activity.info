@@ -1,0 +1,9 @@
+; Id: $
+name = Activity
+description = "Log Activity across the site."
+core = 7.x
+dependencies[] = trigger
+package = Activity
+files[] = activity.module
+files[] = activity_action_handlers.inc
+files[] = activity.admin.inc

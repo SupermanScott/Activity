@@ -1,0 +1,232 @@
+<?php
+// $Id: $
+
+/**
+ * @file
+ * Records Activity across the site and surfaces that to Views.
+ */
+
+/**
+ * Implementation of hook_menu().
+ */
+function activity_menu() {
+  $items['activity/%/delete'] = array(
+    'title' => 'Delete',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('activity_delete_confirm', 1),
+    'access callback' => 'activity_delete_access',
+    'access arguments' => array(1),
+    'file' => 'activity.admin.inc',
+    'type' => MENU_CALLBACK,
+  );
+  $items['user/%user/activity/settings'] = array(
+    'title' => 'Activity privacy settings',
+    'description' => 'Modify your feed settings',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('activity_user_settings', 1),
+    'access arguments' => array(1),
+    'access callback' => 'activity_account_settings_access',
+    'file' => 'activity.admin.inc',
+    'type' => MENU_LOCAL_TASK,
+  );
+  $items['admin/activity/weight'] = array(
+    'title' => 'Fix Trigger weight',
+    'page callback' => 'activity_fix_trigger_weight',
+    'file' => 'activity.install',
+    'access arguments' => array('administer activity'),
+    'type' => MENU_CALLBACK,
+  );
+  $items['admin/structure/activity'] = array(
+    'title' => 'Activity publisher templates',
+    'description' => 'Modify how your activity messages will look',
+    'page callback' => 'activity_admin_overview',
+    'access arguments' => array('administer activity'),
+    'file' => 'activity.admin.inc',
+  );
+  $items['admin/structure/activity/list'] = array(
+    'title' => 'List',
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+  );
+  $items['admin/structure/activity/create'] = array(
+    'title' => 'Create',
+    'description' => 'Modify how your activity messages will look',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('activity_create_form'),
+    'access arguments' => array('administer activity'),
+    'file' => 'activity.admin.inc',
+    'type' => MENU_LOCAL_TASK,
+    'weight' => 2,
+  );
+  $items['admin/config/activity'] = array(
+    'title' => 'Activity',
+    'description' => 'Modify the settings for how activity behaves',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('activity_settings_form'),
+    'access arguments' => array('administer activity'),
+    'file' => 'activity.admin.inc',
+    'type' => MENU_NORMAL_ITEM,
+  );
+  $items['admin/config/activity/settings'] = array(
+    'title' => 'Settings',
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+  );
+  $items['admin/structure/activity/configure/%activity_handler'] = array(
+    'title' => 'Edit',
+    'description' => 'Modify how your activity messages will look',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('activity_configure_handler_form', 4),
+    'access arguments' => array('administer activity'),
+    'file' => 'activity.admin.inc',
+    'type' => MENU_CALLBACK,
+  );
+  $items['admin/structure/activity/delete/%actions'] = array(
+    'title' => 'Delete',
+    'description' => 'Remove an activity action and associated trigger assignment',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('activity_actions_delete_form', 4),
+    'access arguments' => array('administer activity'),
+    'file' => 'activity.admin.inc',
+    'type' => MENU_CALLBACK,
+  );
+  return $items;
+}
+
+/**
+ * Load an Activity Handler from an aid.
+ *
+ * @param $aid
+ *  {actions}.aid that holds the configuration information.
+ */
+function activity_handler_load($aid) {
+  $hook = db_query("SELECT hook FROM {trigger_assignments} WHERE aid = :aid", array(":aid" => $aid))->fetchField();
+  if (!empty($hook)) {
+    $action_record = actions_load($aid);
+    $action_record = drupal_unpack($action_record, 'parameters');
+    $handler = activity_load_handler($hook);
+    $handler->templates = $action_record->templates;
+    $handler->options = $action_record->options;
+    $handler->actions_id = $action_record->aid;
+    $handler->label = $action_record->label;
+    dpm($handler);
+    return $handler;
+  }
+  return FALSE;
+}
+
+/**
+ * Action Callback.
+ */
+function activity_record($object, $context, $a1, $a2) {
+  if (isset($context['aid'])) {
+    $handler = activity_handler_load($context['aid']);
+    $objects = $handler->loadObjects($context);
+    drupal_alter('activity_objects', $objects, $handler->type);
+    if ($handler->valid($objects)) {
+      $messages = $handler->tokenize($objects);
+      $nid = $handler->determineNid($objects);
+      $eid = $handler->determineEid($objects);
+      $uid = $handler->determineActor($objects);
+
+      // Write to {activity} table.
+      $record = array(
+        'uid' => $uid,
+        'type' => $handler->type,
+        'nid' => $nid,
+        'eid' => $eid,
+        'created' => $_SERVER['REQUEST_TIME'],
+        'actions_id' => $context['aid'],
+      );
+      drupal_alter('activity_record', $record, $context);
+      drupal_write_record('activity', $record);
+
+      drupal_alter('activity_messages', $messages, $handler->name, $objects);
+
+      // Write messages to {activity_messages} table.
+      foreach ($messages as $language_id => $language_messages) {
+        foreach ($language_messages as $uid => $message) {
+          // write the message away first to get the amid.
+          $message_record = new stdClass();
+          $message_record->message = $message;
+          drupal_write_record('activity_messages', $message_record);
+      
+          // now save the target with the amid from above ^^.
+          $target_record = array(
+            'aid' => $record['aid'],
+            'uid' => $uid,
+            'language' => $language_id,
+            'amid' => $message_record->amid,
+          );
+          drupal_write_record('activity_targets', $target_record);
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Implementation of hook_activity_api().
+ */
+function node_activity_api() {
+  return array(
+    'api' => '3-alpha',
+    'realms' => array('node_author' => 'Node Author'),
+    'hooks' => array(
+      'node_insert' => array(
+        'batch' => TRUE,
+        'handler' => 'NodeActivityActionHandler',
+        'name' => 'Node Insert',
+      ),
+    ),
+  );
+}
+
+/**
+ * Load a Handler for a given hook.
+ *
+ * @param $hook
+ *   The hook associated with the handler.
+ *
+ * @return ActivityActionHandler
+ */
+function activity_load_handler($hook) {
+  $hooks = activity_cache_get('hooks');
+  $handler = new $hooks[$hook]['handler'];
+
+  $handler->type = $hook;
+  return $handler;
+}
+
+/**
+ * helper function to get the enabled languages
+ *
+ * @return array
+ * array with the keys as the short id of the language (i.e. en)
+ */
+function activity_enabled_languages() {
+  $languages = language_list('enabled');
+  return $languages[1];
+}
+
+// CRUD Functions
+function activity_cache_get($type) {
+  $api_information = activity_cache_api_load();
+  return $api_information[$type];
+}
+
+function activity_cache_api_load() {
+  $info_cache = &drupal_static(__FUNCTION__);
+  if (empty($info_cache)) {
+    $info_cache = array('realms' => array(), 'hooks' => array());
+    foreach (module_implements('activity_api') as $module) {
+      $module_result = module_invoke($module, 'activity_api');
+      // @TODO: use version_compare: http://php.net/manual/en/function.version-compare.php
+      if ($module_result['api'] == '3-alpha') {
+        $info_cache['hooks'] += $module_result['hooks'];
+        $info_cache['realms'] += $module_result['realms'];
+      }
+    }
+    drupal_alter('activity_api', $info_cache);
+  }
+
+  return $info_cache;
+}
