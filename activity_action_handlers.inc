@@ -116,10 +116,15 @@ abstract class ActivityActionHandler {
         );
       }
     }
-    $form['token_help'] = array(
-      '#theme' => 'token_tree',
-      '#token_types' => array_keys($messages),
-    );
+
+    // The token.module provides the UI for the tokens. While not required,
+    // it adds a nice UI.
+    if (module_exists('token')) {
+      $form['token_help'] = array(
+        '#theme' => 'token_tree',
+        '#token_types' => array_keys($messages),
+      );
+    }
   }
 
   /**

@@ -7,3 +7,4 @@ package = Activity
 files[] = activity.module
 files[] = activity_action_handlers.inc
 files[] = activity.admin.inc
+files[] = activity.tokens.inc
