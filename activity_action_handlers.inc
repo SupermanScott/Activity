@@ -177,6 +177,9 @@ abstract class ActivityActionHandler {
     if ($key == 'public') {
       return 0;
     }
+    elseif ($key == 'current_user') {
+      return $GLOBALS['user']->uid;
+    }
     return $objects[$key]->uid;
   }
 
@@ -352,6 +355,17 @@ class NodeActivityActionHandler extends ActivityActionHandler {
       'title' => 'Node Author',
       'description' => 'Author of the node or the user who updated the node',
     );
+
+    if ($this->type == 'node_update') {
+      // If node->uid == $GLOBALS['user']->uid, this message template will be
+      // used instead of $messages['node'].
+      // This key 'current_user' is a fake one, and its existance is handled in
+      // get_uid() method.
+      $messages['current_user'] = array(
+        'title' => 'Updating User',
+        'description' => 'The user who actually updated the node',
+      );
+    }
 
     return $messages;
   }
