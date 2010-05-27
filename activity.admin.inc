@@ -69,10 +69,11 @@ function activity_admin_overview() {
           INNER JOIN {actions} a
             ON a.aid = ta.aid
           WHERE a.type = 'activity'";
-  $results = db_query($sql)->fetchAll();
+  $results = db_query($sql, array(), array(
+               'target' => 'slave',
+               'fetch' => PDO::FETCH_ASSOC))->fetchAll();
   if (!empty($results)) {
-    return '';
-    return theme('activity_settings_actions_list');
+    return theme('activity_settings_actions_list', array('results' => $results));
   }
 
   return t('There are no Activity Templates created yet. !link', array('!link' => l(t('Create one now.'), 'admin/structure/activity/create')));

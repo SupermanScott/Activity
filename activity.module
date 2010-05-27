@@ -190,6 +190,11 @@ function node_activity_api() {
         'handler' => 'NodeActivityActionHandler',
         'name' => 'Node Insert',
       ),
+      'node_view' => array(
+        'batch' => TRUE,
+        'handler' => 'NodeActivityActionHandler',
+        'name' => 'Node View',
+      ),
     ),
     'file' => drupal_get_path('module', 'activity') . '/modules/node.activity.inc',
   );
@@ -291,4 +296,61 @@ function activity_cache_api_load() {
   }
 
   return $info_cache;
+}
+
+/**
+ * Implementation of hook_theme().
+ */
+function activity_theme($existing, $type, $theme, $path) {
+  return array(
+    'activity_settings_actions_list' => array(
+      'variables' => array('results' => NULL),
+    ),
+    'activity_token_help' => array(
+      'variables' => array('types' => NULL, 'prefix' => NULL, 'suffix' => NULL),
+    ),
+    'activity_username' => array(
+      'variables' => array('account' => NULL),
+    ),
+  );
+}
+
+/**
+ * Theme function to display a list of available activity actions.
+ */
+function theme_activity_settings_actions_list($vars) {
+  $header = array(t('Module'), t('Trigger'), t('Operations'));
+  foreach ($vars['results'] as $result) {
+    $rows[] = array(
+      drupal_ucfirst(str_replace('_', ' ', $result['hook'])),
+      $result['description'],
+      l('configure', 'admin/structure/activity/configure/'. $result['aid']) .' | '.
+      l('delete', 'admin/structure/activity/delete/'. $result['aid']),
+    );
+  }
+  $output = theme('table', array('header' => $header, 'rows' => $rows));
+  return $output;
+}
+
+/**
+ * Theme function to return username.
+ * This allows us to theme the username separately for activity feeds then the
+ * rest of the site.
+ */
+function theme_activity_username($vars) {
+  if ($vars['object']->uid && $vars['object']->name) {
+    // Shorten the name when it is too long or it will break many tables.
+    if (drupal_strlen($vars['object']->name) > 20) {
+      $name = drupal_substr($vars['object']->name, 0, 15) .'...';
+    }
+    else {
+      $name = $vars['object']->name;
+    }
+     $output = l($name, 'user/'. $vars['object']->uid, array('attributes' => array('title' => t('View user profile.'))));
+  }
+  else {
+    $output = check_plain(variable_get('anonymous', t('Anonymous')));
+  }
+
+  return $output;
 }
