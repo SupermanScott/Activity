@@ -271,7 +271,6 @@ class NodeActivityActionHandler extends ActivityActionHandler {
    */
   public function loadObjects($context) {
     $objects = parent::loadObjects($context);
-    $objects['user'] = $GLOBALS['user'];
     $objects['node'] = $context['node'];
 
     return $objects;
