@@ -308,6 +308,7 @@ function activity_cache_api_load() {
       $module_result = module_invoke($module, 'activity_api');
       // @TODO: use version_compare: http://php.net/manual/en/function.version-compare.php
       if ($module_result['api'] == '3-alpha') {
+        $module_result += array('realms' => array(), 'hooks' => array());
         foreach ($module_result['realms'] as $realm => $data) {
           $module_result['realms'][$realm] += array('module' => $module, 'file' => $module_result['file']);
         }
