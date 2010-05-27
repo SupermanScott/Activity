@@ -101,7 +101,12 @@ abstract class ActivityActionHandler {
    *   The state of the form.
    */
   public function messagesForm(&$form, $form_state) {
-    $messages = $this->messages();
+    $messages = $this->messages() + array(
+      'public' => array(
+        'title' => 'Public Message',
+        'description' => 'Message displayed to everyone who is not a part of this Activity',
+      ),
+    );
     foreach (activity_enabled_languages() as $id => $language) {
       $form[$id] = array(
         '#type' => 'fieldset',
@@ -131,12 +136,7 @@ abstract class ActivityActionHandler {
    * Return an array of message types.
    */
   protected function messages() {
-    return array(
-      'public' => array(
-        'title' => 'Public Message',
-        'description' => 'Message displayed to everyone who is not a part of this Activity',
-      ),
-    );
+    return array();
   }
 
   /**
