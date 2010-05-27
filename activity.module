@@ -233,6 +233,30 @@ function node_activity_api() {
 }
 
 /**
+ * Implements hook_activity_api().
+ */
+function comment_activity_api() {
+  return array(
+    'api' => '3-alpha',
+    'realms' => array(
+      'comment' => array(
+        'name' => 'Comment',
+      ),
+    ),
+    'hooks' => array(
+      'comment_insert' => array(
+        'batch' => TRUE,
+        'handler' => 'CommentActivityActionHandler',
+        'name' => 'Comment Insert',
+      ),
+    ),
+    // For almost all modules this will not be required thanks to hook_hook_info
+    // but for adding this to core behavior, this is used.
+    'file' => drupal_get_path('module', 'activity') . '/modules/comment.activity.inc',
+  );
+}
+
+/**
  * Load a Handler for a given hook.
  *
  * @param $hook

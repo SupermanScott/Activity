@@ -48,7 +48,6 @@ abstract class ActivityActionHandler {
    *   An array of objects.
    *
    * @return array
-   *  
    */
   public function loadObjects($context) {
     $objects = array();
@@ -374,6 +373,71 @@ class NodeActivityActionHandler extends ActivityActionHandler {
     }
 
     return $messages;
+  }
+}
+
+/**
+ * Activity handler for the comment module.
+ * Extends the node handler has it presents a lot of the same things, just more.
+ */
+class CommentActivityActionHandler extends NodeActivityActionHandler {
+  /**
+   * Load objects for tokenization.
+   *
+   * @param &$objects
+   *   An array of objects.
+   *
+   * @return array
+   */
+  public function loadObjects($context) {
+    $objects = array();
+    $objects['comment'] = $context['comment'];
+    $objects['node'] = node_load($context['comment']->nid);
+
+    return $objects;
+  }
+   /**
+   * Return an array of message types.
+   */
+  protected function messages() {
+    $messages = parent::messages();
+    $messages['comment'] = array(
+      'title' => 'Comment Author',
+      'description' => 'The author of the comment',
+    );
+    $messages['node_comment'] = array(
+      'title' => 'Comment and Node Author',
+      'description' => 'When both the comment and the node author are the same display this message',
+    );
+    return $messages;
+  }
+
+  /**
+   * Return the user id that matches the provided key in the templates.
+   *
+   * @param string $key
+   *   The message key.
+   * @param array $objects
+   *   All the objects for the Activity.
+   *
+   * @return int
+   */
+  protected function get_uid($key, $objects) {
+    if ($key == 'public') {
+      return 0;
+    }
+    elseif ($key == 'current_user') {
+      return $GLOBALS['user']->uid;
+    }
+    // node_comment key is when the comment and the node author are the same.
+    elseif ($key == 'node_comment' && $objects['node']->uid == $objects['comment']->uid {
+      return $objects['comment']->uid;
+    }
+    if (isset($objects[$key]) && isset($objects[$key]->uid)) {
+      return $objects[$key]->uid;
+    }
+
+    return FALSE;
   }
 }
 
