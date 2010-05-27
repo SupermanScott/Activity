@@ -263,6 +263,9 @@ class NodeActivityActionHandler extends ActivityActionHandler {
    * @return int
    */
   public function determineActor($objects) {
+    if ($this->type == 'node_update') {
+      return $GLOBALS['user']->uid;
+    }
     return $objects['node']->uid;
   }
 
