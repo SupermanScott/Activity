@@ -458,7 +458,7 @@ class CommentActivityActionHandler extends NodeActivityActionHandler {
       return $GLOBALS['user']->uid;
     }
     // node_comment key is when the comment and the node author are the same.
-    elseif ($key == 'node_comment' && $objects['node']->uid == $objects['comment']->uid {
+    elseif ($key == 'node_comment' && $objects['node']->uid == $objects['comment']->uid) {
       return $objects['comment']->uid;
     }
     if (isset($objects[$key]) && isset($objects[$key]->uid)) {
