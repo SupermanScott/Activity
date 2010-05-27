@@ -82,34 +82,44 @@ function activity_admin_overview() {
 /**
  * Form builder to select what type of Activity to record.
  */
-function activity_create_form($form_state) {
+function activity_create_form($form, &$form_state) {
   $hooks = activity_cache_get('hooks');
   foreach ($hooks as $hook => $information) {
     $hook_options[$hook] = t($information['name']);
   }
+
+  $form['label'] = array(
+    '#type' => 'textfield',
+    '#default_value' => '',
+    '#title' => t('Label'),
+    '#weight' => -10,
+    '#required' => TRUE,
+  );
+
   $form['hook'] = array(
     '#title' => t('Choose your hook'),
-    '#description' => t('Choose the hook to record Activity for'),
+    '#description' => t('The hook that this Activity will record messages.'),
     '#options' => $hook_options,
     '#type' => 'radios',
+    '#required' => TRUE,
   );
 
   $form['next'] = array(
     '#type' => 'submit',
-    '#value' => t('Next'),
+    '#value' => t('Create'),
   );
   return $form;
 }
 
 /**
- * Form submit callback to create the new ActivityAction.
+ * Form submit callback to create the new ActivityActionHandler.
  */
 function activity_create_form_submit($form, &$form_state) {
   // Save it once to get the aid.
-  $aid = actions_save('activity_record', 'activity', array(), $form['hook']['#options'][$form_state['values']['hook']]);
+  $aid = actions_save('activity_record', 'activity', array(), $form_state['values']['label']);
 
   // Now save the aid away to the parameters.
-  actions_save('activity_record', 'activity', array('aid' => $aid, 'templates' => array(), 'options' => array()), $form['hook']['#options'][$form_state['values']['hook']], $aid);
+  actions_save('activity_record', 'activity', array('aid' => $aid, 'templates' => array(), 'options' => array()), $form_state['values']['label'], $aid);
 
   // Write to the trigger assignments.
   $record = array(
@@ -122,15 +132,19 @@ function activity_create_form_submit($form, &$form_state) {
 }
 
 /**
- * Menu callback to administer activity messages.
+ * Form builder for the Handler configuration.
  */
 function activity_configure_handler_form($form, $form_state, ActivityActionHandler $action) {
-  $form += array('#tree' => TRUE, 'options' => array(), 'messages' => array());
-  $form['label'] = array(
-    '#type' => 'textfield',
-    '#default_value' => $action->label,
-    '#title' => t('Label'),
-    '#weight' => -10,
+  $form += array(
+    '#tree' => TRUE,
+    'options' => array(),
+    'messages' => array(),
+    'label' => array(
+      '#type' => 'textfield',
+      '#default_value' => $action->label,
+      '#title' => t('Label'),
+      '#weight' => -10,
+    ),
   );
 
   // Add in the handlers options and messages.
