@@ -292,6 +292,22 @@ class NodeActivityActionHandler extends ActivityActionHandler {
   }
 
   /**
+   * Determine if the current Action is valid for this object.
+   *
+   * @param array $objects
+   *   The collection of objects for this action.
+   *
+   * @return boolean
+   */
+  public function valid($objects) {
+    $types = array_filter($this->options['types']);
+    if (!empty($this->options['types'])) {
+      return in_array($objects['node']->type, $types);
+    }
+    return TRUE;
+  }
+
+  /**
    * Return an array of message types.
    */
   protected function messages() {
