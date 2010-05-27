@@ -7,6 +7,29 @@
  */
 
 /**
+ * Implements hook_hook_info().
+ */
+function activity_hook_info() {
+  return array(
+    'activity_api' => array(
+      'group' => 'activity',
+    ),
+    'activity_objects_alter' => array(
+      'group' => 'activity',
+    ),
+    'activity_record_alter' => array(
+      'group' => 'activity',
+    ),
+    'activity_messages_alter' => array(
+      'group' => 'activity',
+    ),
+    'activity_access_records_alter' => array(
+      'group' => 'activity',
+    ),
+  );
+}
+
+/**
  * Implementation of hook_menu().
  */
 function activity_menu() {
@@ -203,6 +226,8 @@ function node_activity_api() {
         'name' => 'Node Update',
       ),
     ),
+    // For almost all modules this will not be required thanks to hook_hook_info
+    // but for adding this to core behavior, this is used.
     'file' => drupal_get_path('module', 'activity') . '/modules/node.activity.inc',
   );
 }
