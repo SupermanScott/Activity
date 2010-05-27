@@ -33,6 +33,7 @@ function activity_token_info() {
  */
 function activity_tokens($type, $tokens, array $data = array(), array $options = array()) {
   $replacements = array();
+
   if ($type == 'user' && !empty($data['user'])) {
     foreach ($tokens as $name => $original) {
       switch ($name) {

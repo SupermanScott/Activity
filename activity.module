@@ -60,7 +60,7 @@ function activity_menu() {
     'type' => MENU_CALLBACK,
   );
   $items['admin/structure/activity'] = array(
-    'title' => 'Activity publisher templates',
+    'title' => 'Activity Templates',
     'description' => 'Modify how your activity messages will look',
     'page callback' => 'activity_admin_overview',
     'access arguments' => array('administer activity'),
