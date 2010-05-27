@@ -319,13 +319,17 @@ function activity_theme($existing, $type, $theme, $path) {
  * Theme function to display a list of available activity actions.
  */
 function theme_activity_settings_actions_list($vars) {
-  $header = array(t('Module'), t('Trigger'), t('Operations'));
+  $header = array(t('Label'), t('Hook'), t('Operations'));
   foreach ($vars['results'] as $result) {
-    $rows[] = array(
-      drupal_ucfirst(str_replace('_', ' ', $result['hook'])),
-      $result['description'],
-      l('configure', 'admin/structure/activity/configure/'. $result['aid']) .' | '.
+    $operations = array(
+      l('configure', 'admin/structure/activity/configure/'. $result['aid']),
       l('delete', 'admin/structure/activity/delete/'. $result['aid']),
+    );
+
+    $rows[] = array(
+      $result['label'],
+      drupal_ucfirst(str_replace('_', ' ', $result['hook'])),
+      implode(' | ', $operations),
     );
   }
   $output = theme('table', array('header' => $header, 'rows' => $rows));

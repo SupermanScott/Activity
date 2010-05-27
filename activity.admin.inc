@@ -64,7 +64,7 @@ function activity_user_settings_submit($form, &$form_state) {
  */
 function activity_admin_overview() {
   $results = array();
-  $sql = "SELECT ta.hook, ta.aid, a.label as description
+  $sql = "SELECT ta.hook, ta.aid, a.label
           FROM {trigger_assignments} ta
           INNER JOIN {actions} a
             ON a.aid = ta.aid
@@ -126,10 +126,18 @@ function activity_create_form_submit($form, &$form_state) {
  */
 function activity_configure_handler_form($form, $form_state, ActivityActionHandler $action) {
   $form += array('#tree' => TRUE, 'options' => array(), 'messages' => array());
+  $form['label'] = array(
+    '#type' => 'textfield',
+    '#default_value' => $action->label,
+    '#title' => t('Label'),
+    '#weight' => -10,
+  );
+
+  // Add in the handlers options and messages.
   $action->optionForm($form['options'], $form_state);
   $action->messagesForm($form['messages'], $form_state);
+
   $form['#actions_id'] = $action->actions_id;
-  $form['#label'] = $action->label;
   $form['save'] = array(
     '#type' => 'submit',
     '#value' => t('Save'),
@@ -146,7 +154,7 @@ function activity_configure_handler_form_submit($form, &$form_state) {
     'options' => $form_state['values']['options'],
     'templates' => $form_state['values']['messages'],
   );
-  actions_save('activity_record', 'activity', $params, $form['#label'], $form['#actions_id']); 
+  actions_save('activity_record', 'activity', $params, $form_state['values']['label'], $form['#actions_id']);
 }
 
 /**
