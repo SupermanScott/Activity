@@ -470,5 +470,85 @@ class CommentActivityActionHandler extends NodeActivityActionHandler {
 }
 
 /**
+ * Activity Action Handler for the user triggers.
+ */
+class UserActivityActionHandler extends ActivityActionHandler {
+  /**
+   * Return an array of message types.
+   */
+  protected function messages() {
+    $messages = parent::messages();
+    $messages['user'] = array(
+      'title' => 'User Account',
+      'description' => 'User account that the action is applied to',
+    );
+    return $messages;
+  }
+
+  /**
+   * Return the eid field for this Activity.
+   *
+   * @param array $objects
+   *  The objects used in tokenization
+   *
+   * @return int / NULL
+   */
+  public function determineEid($objects) {
+    return $objects['user']->uid;
+  }
+
+  /**
+   * Return the uid that is responsible for this action.
+   *
+   * @param array $objects
+   *  The objects used in tokenization
+   *
+   * @return int
+   */
+  public function determineActor($objects) {
+    return $objects['user']->uid;
+  }
+
+  /**
+   * Display an FAPI form.
+   *
+   * @param &$form
+   *   An FAPI form array.
+   * @param $form_state
+   *   The form_state from FAPI.
+   */
+  public function optionForm(&$form, $form_state) {
+    parent::optionForm($form, $form_state);
+    $roles = user_roles();
+    $form['roles'] = array(
+      '#type' => 'checkboxes',
+      '#title' => t('Roles'),
+      '#options' => $roles,
+      '#default_value' => $this->options['roles'],
+    );
+  }
+
+  /**
+   * Determine if the current Action is valid for this object.
+   *
+   * @param array $objects
+   *   The collection of objects for this action.
+   * @param array $context
+   *   The context array passed into by the triggering module.
+   *
+   * @return boolean
+   */
+  public function valid($objects, $context) {
+    $roles = array_filter($this->options['roles']);
+    if (!empty($roles)) {
+      $user_roles = array_keys($objects['user']->roles);
+      $intersect = array_intersect($user_roles, $roles);
+      return !empty($intersect);
+    }
+    return TRUE;
+  }
+}
+
+/**
  * @} End of "ingroup activity handlers".
  */

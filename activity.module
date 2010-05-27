@@ -257,6 +257,22 @@ function comment_activity_api() {
 }
 
 /**
+ * Implements hook_activity_api().
+ */
+function user_activity_api() {
+  return array(
+    'api' => '3-alpha',
+    'hooks' => array(
+      'user_insert' => array(
+        'batch' => TRUE,
+        'handler' => 'UserActivityActionHandler',
+        'name' => 'User Register',
+      ),
+    ),
+  );
+}
+
+/**
  * Load a Handler for a given hook.
  *
  * @param $hook
