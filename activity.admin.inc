@@ -217,13 +217,16 @@ function activity_settings_form(&$form_state = NULL) {
   );
   
 
-  // get all the  modules and their realms
-  $api_info = activity_get_module_info();
+  // Allow realms provided by modules.
   $realms = array();
-  foreach ($api_info as $module => $info) {
-    foreach ($info->realms as $realm => $nice_name) {
-      $realms[$realm] = t('@module: @name', array('@module' => drupal_ucfirst($module), '@name' => $nice_name));
-    }
+  foreach (activity_cache_get('all_realms') as $realm => $information) {
+    $realms[$realm] = $information['name'];
+  }
+
+  // Set up the default value for this set of checkboxes.
+  $enabled = array();
+  foreach (activity_cache_get('realms') as $realm => $information) {
+    $enabled[$realm] = $realm;
   }
 
   $form['activity_access'] = array(
@@ -236,7 +239,7 @@ function activity_settings_form(&$form_state = NULL) {
     '#title' => t('Realms'),
     '#description' => t('Select the realms for which Activity access records should be recorded. These realms will allow a View to filter in more then just one users Activity.'),
     '#options' => $realms,
-    '#default_value' => activity_access_realms(),
+    '#default_value' => $enabled,
   );
 
   $form['activity_access']['activity_access_rebuild'] = array(
@@ -256,7 +259,7 @@ function activity_settings_form(&$form_state = NULL) {
  */
 function activity_expire_validate($element, &$form_state) {
   if (empty($form_state['values']['activity_expire']) && !empty($form_state['values']['activity_min_count'])) {
-    form_set_error($element['activity_expire'], t('You must set a time limit in order to use the minimum count'), $form_state);
+    form_set_error('activity_expire', t('You must set a time limit in order to use the minimum count'));
   }
 }
 
