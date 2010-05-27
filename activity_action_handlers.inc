@@ -152,10 +152,13 @@ abstract class ActivityActionHandler {
     $messages = array();
     foreach ($this->templates as $language_id => $language_patterns) {
       foreach ($language_patterns as $target_key => $text) {
-        // @TODO: pass in the language object.
-        $message = token_replace($text, $objects, array('clear' => TRUE, 'sanitize' => FALSE));
-        if (!empty($message)) {
-          $messages[$language_id][$this->get_uid($target_key, $objects)] = $message;
+        $uid = $this->get_uid($target_key, $objects);
+        if ($uid !== FALSE) {
+          // @TODO: pass in the language object.
+          $message = token_replace($text, $objects, array('clear' => TRUE, 'sanitize' => FALSE));
+          if (!empty($message)) {
+            $messages[$language_id][$uid] = $message;
+          }
         }
       }
     }
@@ -180,7 +183,11 @@ abstract class ActivityActionHandler {
     elseif ($key == 'current_user') {
       return $GLOBALS['user']->uid;
     }
-    return $objects[$key]->uid;
+    if (isset($objects[$key]) && isset($objects[$key]->uid)) {
+      return $objects[$key]->uid;
+    }
+
+    return FALSE;
   }
 
   /**
