@@ -83,10 +83,12 @@ abstract class ActivityActionHandler {
    *
    * @param array $objects
    *   The collection of objects for this action.
+   * @param array $context
+   *   The context array passed into by the triggering module.
    *
    * @return boolean
    */
-  public function valid($objects) {
+  public function valid($objects, $context) {
     return TRUE;
   }
 
@@ -289,6 +291,21 @@ class NodeActivityActionHandler extends ActivityActionHandler {
       '#options' => $node_types,
       '#default_value' => $this->options['types'],
     );
+
+    $node_entity_info = entity_get_info('node');
+    $view_mode_options = array();
+    foreach ($node_entity_info['view modes'] as $mode => $information) {
+      $view_mode_options[$mode] = $information['label'];
+    }
+
+    // This is a node_view specific option.
+    $form['view_modes'] = array(
+      '#type' => 'checkboxes',
+      '#title' => t('View Modes'),
+      '#options' => $view_mode_options,
+      '#default_value' => $this->options['view_modes'],
+      '#access' => $this->type == 'node_view',
+    );
   }
 
   /**
@@ -296,15 +313,29 @@ class NodeActivityActionHandler extends ActivityActionHandler {
    *
    * @param array $objects
    *   The collection of objects for this action.
+   * @param array $context
+   *   The context array passed into by the triggering module.
    *
    * @return boolean
    */
-  public function valid($objects) {
+  public function valid($objects, $context) {
     $types = array_filter($this->options['types']);
-    if (!empty($this->options['types'])) {
-      return in_array($objects['node']->type, $types);
+    $type_check = TRUE;
+    $view_modes_check = TRUE;
+
+    if (!empty($types)) {
+      $type_check = in_array($objects['node']->type, $types);
     }
-    return TRUE;
+
+    $view_modes = array_filter($this->options['view_modes']);
+    if (!empty($view_modes)) {
+      // When the trigger is fired, the build mode is passed to the actions
+      // callback as $a1. activity_record() takes the two arguments and places
+      // them into the context array under the 'additional_arguments' key.
+      // @see activity_record
+      $view_modes_check = in_array($context['additional_arguments'][0], $view_modes);
+    }
+    return $type_check && $view_modes_check;
   }
 
   /**

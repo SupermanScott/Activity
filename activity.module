@@ -118,10 +118,12 @@ function activity_handler_load($aid) {
  */
 function activity_record($object, $context, $a1, $a2) {
   if (isset($context['aid'])) {
+    $context += array('additional_arguments' => array($a1, $a2));
     $handler = activity_handler_load($context['aid']);
     $objects = $handler->loadObjects($context);
     drupal_alter('activity_objects', $objects, $handler->type);
-    if ($handler->valid($objects)) {
+
+    if ($handler->valid($objects, $context)) {
       $messages = $handler->tokenize($objects);
       $nid = $handler->determineNid($objects);
       $eid = $handler->determineEid($objects);
@@ -194,6 +196,11 @@ function node_activity_api() {
         'batch' => TRUE,
         'handler' => 'NodeActivityActionHandler',
         'name' => 'Node View',
+      ),
+      'node_update' => array(
+        'batch' => FALSE,
+        'handler' => 'NodeActivityActionHandler',
+        'name' => 'Node Update',
       ),
     ),
     'file' => drupal_get_path('module', 'activity') . '/modules/node.activity.inc',
