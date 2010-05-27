@@ -396,6 +396,31 @@ class CommentActivityActionHandler extends NodeActivityActionHandler {
 
     return $objects;
   }
+
+  /**
+   * Return the eid field for this Activity.
+   *
+   * @param array $objects
+   *  The objects used in tokenization
+   *
+   * @return int / NULL
+   */
+  public function determineEid($objects) {
+    return $objects['comment']->cid;
+  }
+
+  /**
+   * Return the uid that is responsible for this action.
+   *
+   * @param array $objects
+   *  The objects used in tokenization
+   *
+   * @return int
+   */
+  public function determineActor($objects) {
+    return $objects['comment']->uid;
+  }
+
    /**
    * Return an array of message types.
    */
