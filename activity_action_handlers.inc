@@ -374,6 +374,12 @@ class NodeActivityActionHandler extends ActivityActionHandler {
         'description' => 'The user who actually updated the node',
       );
     }
+    elseif ($this->type == 'node_view') {
+      $messages['current_user'] = array(
+        'title' => 'Current User',
+        'description' => 'The user viewing the node',
+      );
+    }
 
     return $messages;
   }
