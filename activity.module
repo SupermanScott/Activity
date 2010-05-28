@@ -273,6 +273,11 @@ function user_activity_api() {
         'handler' => 'UserActivityActionHandler',
         'name' => 'User Login',
       ),
+      'user_logout' => array(
+        'batch' => FALSE,
+        'handler' => 'UserActivityActionHandler',
+        'name' => 'User Logout',
+      ),
     ),
   );
 }
