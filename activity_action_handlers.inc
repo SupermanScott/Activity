@@ -484,6 +484,12 @@ class UserActivityActionHandler extends ActivityActionHandler {
    */
   protected function messages() {
     $messages = parent::messages();
+    if ($this->type == 'user_update') {
+      $messages['current_user'] = array(
+        'title' => 'Updating User',
+        'description' => 'The user doing the updating',
+      );
+    }
     $messages['user'] = array(
       'title' => 'User Account',
       'description' => 'User account that the action is applied to',
