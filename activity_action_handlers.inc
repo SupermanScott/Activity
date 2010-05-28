@@ -263,10 +263,10 @@ class NodeActivityActionHandler extends ActivityActionHandler {
    * @return int
    */
   public function determineActor($objects) {
-    if ($this->type == 'node_update') {
-      return $GLOBALS['user']->uid;
+    if ($this->type == 'node_insert') {
+      return $objects['node']->uid;
     }
-    return $objects['node']->uid;
+    return $GLOBALS['user']->uid;
   }
 
   /**
@@ -518,6 +518,9 @@ class UserActivityActionHandler extends ActivityActionHandler {
    * @return int
    */
   public function determineActor($objects) {
+    if ($this->type == 'user_update') {
+      return $GLOBALS['user']->uid;
+    }
     return $objects['user']->uid;
   }
 
