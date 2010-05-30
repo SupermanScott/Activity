@@ -241,34 +241,36 @@ function activity_recreate_messages(array $records) {
   foreach ($records as $record) {
     // Delete existing messages.
     $amids = db_query("SELECT amid FROM {activity_targets} WHERE aid = :aid", array(":aid" => $record->aid))->fetchCol();
-    db_delete('activity_targets')
-      ->condition('amid', $amids, 'IN')
-      ->execute();
-    db_delete('activity_messages')
-      ->condition('amid', $amids, 'IN')
-      ->execute();
 
     $handler = activity_handler_load($record->actions_id);
-    $objects = $handler->loadObjects($record->eid);
-    drupal_alter('activity_objects', $objects, $handler->type);
-
-    $a1 = NULL;
-    $a2 = NULL;
-    if (isset($record->argument1)) {
-      $a1 = unserialize($record->argument1);
-    }
-    if (isset($record->argument2)) {
-      $a2 = unserialize($record->argument2);
-    }
-
-    if ($handler->valid($objects, $a1, $a2)) {
-      activity_write_messages($handler->tokenize($objects), $record->aid);
-    }
-    else {
-      // Delete the activity.
-      db_delete('activity')
-        ->condition('aid', $record->aid)
+    if ($handler->batch) {
+      db_delete('activity_targets')
+        ->condition('amid', $amids, 'IN')
         ->execute();
+      db_delete('activity_messages')
+        ->condition('amid', $amids, 'IN')
+        ->execute();
+      $objects = $handler->loadObjects($record->eid);
+      drupal_alter('activity_objects', $objects, $handler->type);
+
+      $a1 = NULL;
+      $a2 = NULL;
+      if (isset($record->argument1)) {
+        $a1 = unserialize($record->argument1);
+      }
+      if (isset($record->argument2)) {
+        $a2 = unserialize($record->argument2);
+      }
+
+      if ($handler->valid($objects, $a1, $a2)) {
+        activity_write_messages($handler->tokenize($objects), $record->aid);
+      }
+      else {
+        // Delete the activity.
+        db_delete('activity')
+          ->condition('aid', $record->aid)
+          ->execute();
+      }
     }
   }
 }
