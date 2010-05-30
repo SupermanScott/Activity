@@ -139,6 +139,7 @@ function activity_configure_handler_form($form, $form_state, ActivityActionHandl
     '#tree' => TRUE,
     'options' => array(),
     'messages' => array(),
+    'test' => array(),
     'label' => array(
       '#type' => 'textfield',
       '#default_value' => $action->label,
@@ -147,16 +148,96 @@ function activity_configure_handler_form($form, $form_state, ActivityActionHandl
     ),
   );
 
+  $form_state += array(
+    'messages' => array(
+      'en' => array(
+        0 => 'Enter an Eid to test this message'
+      ),
+    ),
+  );
+
   // Add in the handlers options and messages.
   $action->optionForm($form['options'], $form_state);
   $action->messagesForm($form['messages'], $form_state);
 
+  $table_id = 'activity-test-table';
   $form['#actions_id'] = $action->actions_id;
+  $form['test'] = array(
+    '#prefix' => '<div class="container-inline">',
+    '#suffix' => '</div>',
+    'eid' => array(
+      '#type' => 'textfield',
+      '#title' => t('Enter the ID'),
+      '#default_value' => '',
+      '#size' => 5,
+    ),
+    'additional_arguments' => array(
+      'argument1' => array(
+        '#type' => 'textfield',
+        '#title' => t('Argument 1'),
+        '#size' => 5,
+      ),
+      'argument2' => array(
+        '#type' => 'textfield',
+        '#title' => t('Argument 2'),
+        '#size' => 5,
+      ),
+    ),
+    'submit_test' => array(
+      '#type' => 'submit',
+      '#value' => t('Test'),
+      '#submit' => array('activity_message_test_submit'),
+      '#ajax' => array(
+        'callback' => 'activity_message_test_ajax_callback',
+        'wrapper' => $table_id,
+      ),
+    ),
+  );
+
+  $rows = array();
+  foreach ($form_state['messages'] as $lang => $messages) {
+    foreach ($messages as $uid => $message) {
+      $rows[] = array($lang, $uid, $message);
+    }
+  }
+  $form['message_results'] = array(
+    '#markup' => theme('table', array('header' => array(t('Language'), t('User id'), t('Message')),'rows' => $rows, 'attributes' => array('id' => $table_id))),
+  );
   $form['save'] = array(
     '#type' => 'submit',
     '#value' => t('Save'),
   );
   return $form;
+}
+
+/**
+ * Submit handler for the test button.
+ */
+function activity_message_test_submit($form, &$form_state) {
+  $form_state['messages'] = array(
+    'en' => array(
+      0 => 'Invalid Eid',
+    ),
+  );
+  $handler = activity_handler_load($form['#actions_id']);
+  $handler->options = $form_state['values']['options'];
+  $handler->templates = $form_state['values']['messages'];
+
+  $objects = $handler->loadObjects($form_state['values']['test']['eid']);
+  drupal_alter('activity_objects', $objects, $handler->type);
+
+  if ($handler->valid($objects, $form_state['values'])) {
+    $form_state['messages'] = $handler->tokenize($objects);
+  }
+
+  $form_state['rebuild'] = TRUE;
+}
+
+/**
+ * AJAX callback for the test ajax button.
+ */
+function activity_message_test_ajax_callback($form, $form_state) {
+  return $form['message_results'];
 }
 
 /**
