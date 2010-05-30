@@ -102,7 +102,7 @@ function activity_menu() {
     'file' => 'activity.admin.inc',
     'type' => MENU_CALLBACK,
   );
-  $items['admin/structure/activity/recreate/%actions/%'] = array(
+  $items['admin/structure/activity/recreate/%activity_handler_batchable/%'] = array(
     'title' => 'Recreate Messages',
     'description' => 'Recreate messages for the provided action',
     'page callback' => 'activity_admin_recreate',
@@ -147,6 +147,20 @@ function activity_handler_load($aid) {
 }
 
 /**
+ * Load a batchable Activity Handler from an aid.
+ *
+ * @param $aid
+ *   {actions}.aid that holds the configuration information.
+ */
+function activity_handler_batchable_load($aid) {
+  $handler = activity_handler_load($aid);
+  if (!empty($handler) && $handler->batch) {
+    return $handler;
+  }
+  return FALSE;
+}
+
+/**
  * Access callback for batch access
  *
  * @param $action
@@ -155,7 +169,7 @@ function activity_handler_load($aid) {
  *   Token used for security protection.
  */
 function activity_batch_access($action, $token) {
-  return user_access('administer activity') && drupal_valid_token($token, $action->aid);
+  return user_access('administer activity') && drupal_valid_token($token, $action->actions_id);
 }
 
 /**
@@ -315,7 +329,9 @@ function node_activity_api() {
         'name' => 'Node Insert',
       ),
       'node_view' => array(
-        'batch' => TRUE,
+        // The current_user key can be replaced with the user loaded from
+        // {history} table.
+        'batch' => FALSE,
         'handler' => 'NodeActivityActionHandler',
         'name' => 'Node View',
       ),
@@ -399,6 +415,7 @@ function activity_load_handler($hook) {
   $handler = new $hooks[$hook]['handler'];
 
   $handler->type = $hook;
+  $handler->batch = $hooks[$hook]['batch'];
   return $handler;
 }
 
@@ -535,11 +552,15 @@ function activity_theme($existing, $type, $theme, $path) {
 function theme_activity_settings_actions_list($vars) {
   $header = array(t('Label'), t('Hook'), t('Operations'));
   foreach ($vars['results'] as $result) {
+    $handler = activity_handler_load($result['aid']);
     $operations = array(
       l(t('configure'), 'admin/structure/activity/configure/'. $result['aid']),
       l(t('delete'), 'admin/structure/activity/delete/'. $result['aid']),
-      l(t('update messages'), 'admin/structure/activity/recreate/' . $result['aid'] . '/' . drupal_get_token($result['aid'])),
     );
+
+    if ($handler->batch) {
+      $operations[] = l(t('update messages'), 'admin/structure/activity/recreate/' . $result['aid'] . '/' . drupal_get_token($result['aid']));
+    }
 
     $rows[] = array(
       $result['label'],

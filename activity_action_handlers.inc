@@ -42,6 +42,13 @@ abstract class ActivityActionHandler {
   public $label;
 
   /**
+   * Boolean indicating if this handler can do batch operations.
+   *
+   * @var boolean
+   */
+  public $batch;
+
+  /**
    * Load objects for tokenization.
    *
    * @param int $eid

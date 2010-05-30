@@ -210,6 +210,7 @@ function activity_configure_handler_form($form, $form_state, ActivityActionHandl
   $form['save_update'] = array(
     '#type' => 'submit',
     '#value' => t('Save and Update Existing'),
+    '#access' => $action->batch,
   );
   return $form;
 }
@@ -489,13 +490,13 @@ function activity_access_rebuild_process(&$context) {
  * Page callback to set up a batch process.
  *
  * @param $action
- *  The row from the {actions} table.
+ *  ActivityActionsHandler to recreate messages for.
  */
-function activity_admin_recreate($action) {
+function activity_admin_recreate(ActivityActionHandler $action) {
   $batch = array(
     'title' => t('Regenerating @label messages', array('@label' => $action->label)),
     'operations' => array(
-      array('activity_recreate_messages_step', array($action->aid)),
+      array('activity_recreate_messages_step', array($action->actions_id)),
     ),
     'file' => drupal_get_path('module', 'activity') . '/activity.admin.inc',
   );
