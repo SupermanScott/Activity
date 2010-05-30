@@ -141,7 +141,6 @@ function activity_handler_load($aid) {
  */
 function activity_record($object, $context, $a1, $a2) {
   if (isset($context['aid'])) {
-    $context += array('additional_arguments' => array($a1, $a2));
     $handler = activity_handler_load($context['aid']);
     $eid = $handler->determineEid($context);
     if (isset($eid)) {
