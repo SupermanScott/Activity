@@ -152,6 +152,15 @@ function activity_record($object, $context, $a1, $a2) {
         $nid = $handler->determineNid($objects);
         $uid = $handler->determineActor($objects);
 
+        $argument1 = NULL;
+        $argument2 = NULL;
+        if (isset($a1)) {
+          $argument1 = serialize($a1);
+        }
+        if (isset($a2)) {
+          $argument2 = serialize($a2);
+        }
+
         // Write to {activity} table.
         $record = array(
           'uid' => $uid,
@@ -160,6 +169,8 @@ function activity_record($object, $context, $a1, $a2) {
           'eid' => $eid,
           'created' => $_SERVER['REQUEST_TIME'],
           'actions_id' => $context['aid'],
+          'argument1' => $argument1,
+          'argument2' => $argument2,
         );
         drupal_alter('activity_record', $record, $context);
         drupal_write_record('activity', $record);
@@ -167,23 +178,8 @@ function activity_record($object, $context, $a1, $a2) {
         drupal_alter('activity_messages', $messages, $handler->name, $objects);
 
         // Write messages to {activity_messages} table.
-        foreach ($messages as $language_id => $language_messages) {
-          foreach ($language_messages as $uid => $message) {
-            // write the message away first to get the amid.
-            $message_record = new stdClass();
-            $message_record->message = $message;
-            drupal_write_record('activity_messages', $message_record);
-      
-            // now save the target with the amid from above ^^.
-            $target_record = array(
-              'aid' => $record['aid'],
-              'uid' => $uid,
-              'language' => $language_id,
-              'amid' => $message_record->amid,
-            );
-            drupal_write_record('activity_targets', $target_record);
-          }
-        }
+        activity_write_messages($messages, $record['aid']);
+
         foreach (activity_get_grants($record) as $realm => $values) {
           foreach ($values as $value) {
             $row = array(
@@ -195,6 +191,76 @@ function activity_record($object, $context, $a1, $a2) {
           }
         }
       }
+    }
+  }
+}
+
+/**
+ * Creates new messages for a set of activity records.
+ *
+ * @param array $records
+ *   An array of {actvity} rows.
+ */
+function activity_recreate_messages(array $records) {
+  foreach ($records as $record) {
+    // Delete existing messages.
+    $amids = db_query("SELECT amid FROM {activity_targets} WHERE aid = :aid", array(":aid" => $record->aid))->fetchCol();
+    db_delete('activity_targets')
+      ->condition('amid', $amids, 'IN')
+      ->execute();
+    db_delete('activity_messages')
+      ->condition('amid', $amids, 'IN')
+      ->execute();
+
+    $handler = activity_handler_load($record->actions_id);
+    $objects = $handler->loadObjects($record->eid);
+    drupal_alter('activity_objects', $objects, $handler->type);
+
+    $a1 = NULL;
+    $a2 = NULL;
+    if (isset($record->argument1)) {
+      $a1 = unserialize($record->argument1);
+    }
+    if (isset($record->argument2)) {
+      $a2 = unserialize($record->argument2);
+    }
+
+    if ($handler->valid($objects, $a1, $a2)) {
+      activity_write_messages($handler->tokenize($objects), $record->aid);
+    }
+    else {
+      // Delete the activity.
+      db_delete('activity')
+        ->condition('aid', $record->aid)
+        ->execute();
+    }
+  }
+}
+
+/**
+ * Writes the provided messages to the activity tables.
+ *
+ * @param array $messages
+ *   The messages to write keyed by language and uid.
+ * @param int $aid
+ *   The {activity}.aid field.
+ */
+function activity_write_messages($messages, $aid) {
+  foreach ($messages as $language_id => $language_messages) {
+    foreach ($language_messages as $uid => $message) {
+      // write the message away first to get the amid.
+      $message_record = new stdClass();
+      $message_record->message = $message;
+      drupal_write_record('activity_messages', $message_record);
+
+      // now save the target with the amid from above ^^.
+      $target_record = array(
+        'aid' => $aid,
+        'uid' => $uid,
+        'language' => $language_id,
+        'amid' => $message_record->amid,
+      );
+      drupal_write_record('activity_targets', $target_record);
     }
   }
 }
@@ -395,6 +461,33 @@ function activity_cache_api_load() {
   }
 
   return $info_cache;
+}
+
+/**
+ * Implements hook_user_update().
+ */
+function activity_user_update(&$edit, $account, $category) {
+  entity_load('user', array(), array(), TRUE);
+  $records = db_query("SELECT * FROM {activity} WHERE uid = :uid", array(":uid" => $account->uid))->fetchAll();
+  activity_recreate_messages($records);
+}
+
+/**
+ * Implements hook_node_update().
+ */
+function activity_node_update($node) {
+  entity_load('node', array(), array(), TRUE);
+  $records = db_query("SELECT * FROM {activity} WHERE nid = :nid", array(":nid" => $node->nid))->fetchAll();
+  activity_recreate_messages($records);
+}
+
+/**
+ * Implements hook_comment_update().
+ */
+function activity_comment_update($comment) {
+  entity_load('comment', array(), array(), TRUE);
+  $records = db_query("SELECT * FROM {activity} WHERE type IN (:types) AND eid = :eid", array(":types" => array('comment_insert'), ":eid" => $comment->cid))->fetchAll();
+  activity_recreate_messages($records);
 }
 
 /**

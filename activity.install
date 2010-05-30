@@ -57,6 +57,18 @@ function activity_schema() {
         'not null' => TRUE,
         'unsigned' => TRUE,
       ),
+      'argument1' => array(
+        'description' => 'Serialized value of first argument passed to the actions callback',
+        'type' => 'text',
+        'size' => 'big',
+        'default' => NULL,
+      ),
+      'argument2' => array(
+        'description' => 'Serialized value of second argument passed to the actions callback',
+        'type' => 'text',
+        'size' => 'big',
+        'default' => NULL,
+      ),
     ),
     'primary key' => array('aid'),
     'indexes' => array(
