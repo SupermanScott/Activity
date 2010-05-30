@@ -44,19 +44,12 @@ abstract class ActivityActionHandler {
   /**
    * Load objects for tokenization.
    *
-   * @param &$objects
-   *   An array of objects.
+   * @param int $eid
+	 *   The entity identifier for this Activity.
    *
    * @return array
    */
-  public function loadObjects($context) {
-    $objects = array();
-    if (isset($context['account'])) {
-      $objects['user'] = $context['account'];
-    }
-
-    return $objects;
-  }
+  abstract public function loadObjects($eid);
 
   /**
    * Return option defaults and structure.
@@ -216,14 +209,12 @@ abstract class ActivityActionHandler {
   /**
    * Return the eid field for this Activity.
    *
-   * @param array $objects
-   *  The objects used in tokenization
+   * @param array $context
+   *  The context array passed into the action callback.
    *
    * @return int / NULL
    */
-  public function determineEid($objects) {
-    return NULL;
-  }
+  abstract public function determineEid($context);
 
   /**
    * Return the uid that is responsible for this action.
@@ -245,13 +236,13 @@ class NodeActivityActionHandler extends ActivityActionHandler {
   /**
    * Return the eid field for this Activity.
    *
-   * @param array $objects
-   *  The objects used in tokenization
+   * @param array $context
+   *   The context argument passed into the action callback.
    *
-   * @return int / NULL
+   * @return int
    */
-  public function determineEid($objects) {
-    return $objects['node']->nid;
+  public function determineEid($context) {
+    return $context['node']->nid;
   }
 
   /**
@@ -272,15 +263,13 @@ class NodeActivityActionHandler extends ActivityActionHandler {
   /**
    * Load objects for tokenization.
    *
-   * @param &$objects
-   *   An array of objects.
+   * @param int $eid
+	 *   The entity identifier for this Activity.
    *
    * @return array
-   *  
    */
-  public function loadObjects($context) {
-    $objects = parent::loadObjects($context);
-    $objects['node'] = $context['node'];
+  public function loadObjects($eid) {
+    $objects['node'] = node_load($eid);
 
     return $objects;
   }
@@ -393,15 +382,15 @@ class CommentActivityActionHandler extends NodeActivityActionHandler {
   /**
    * Load objects for tokenization.
    *
-   * @param &$objects
-   *   An array of objects.
+   * @param int $eid
+	 *   The entity identifier for this Activity.
    *
    * @return array
    */
-  public function loadObjects($context) {
+  public function loadObjects($eid) {
     $objects = array();
-    $objects['comment'] = $context['comment'];
-    $objects['node'] = node_load($context['comment']->nid);
+    $objects['comment'] = comment_load($eid);
+    $objects['node'] = node_load($objects['comment']->nid);
 
     return $objects;
   }
@@ -409,12 +398,12 @@ class CommentActivityActionHandler extends NodeActivityActionHandler {
   /**
    * Return the eid field for this Activity.
    *
-   * @param array $objects
-   *  The objects used in tokenization
+   * @param array $context
+   *  The context arguments passed into the action callback.
    *
-   * @return int / NULL
+   * @return int
    */
-  public function determineEid($objects) {
+  public function determineEid($context) {
     return $objects['comment']->cid;
   }
 
@@ -496,17 +485,30 @@ class UserActivityActionHandler extends ActivityActionHandler {
     );
     return $messages;
   }
+  /**
+   * Load objects for tokenization.
+   *
+   * @param int $eid
+	 *   The entity identifier for this Activity.
+   *
+   * @return array
+   */
+  public function loadObjects($eid) {
+    return array(
+      'user' => user_load($eid),
+    );
+  }
 
   /**
    * Return the eid field for this Activity.
    *
-   * @param array $objects
-   *  The objects used in tokenization
+   * @param array $context
+   *  The context argument passed into the action callback.
    *
-   * @return int / NULL
+   * @return int
    */
-  public function determineEid($objects) {
-    return $objects['user']->uid;
+  public function determineEid($context) {
+    return $context['account']->uid;
   }
 
   /**
