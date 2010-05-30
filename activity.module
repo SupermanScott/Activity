@@ -403,6 +403,31 @@ function user_activity_api() {
 }
 
 /**
+ * Delete a set of Activities.
+ *
+ * @param array $aids
+ *   An array of {activity}.aid.
+ *
+ * @return array
+ *   An array with two keys 'activities' and 'messages' whose values are the
+ *   count of records deleted.
+ */
+function activity_delete($aids) {
+  $amids = db_query("SELECT amid FROM {activity_targets} WHERE aid IN (:aids)", array(':aids' => $aids))->fetchCol();
+  db_delete('activity_targets')
+    ->condition('amid', $amids, 'IN')
+    ->execute();
+  $count_messages = db_delete('activity_messages')
+    ->condition('amid', $amids, 'IN')
+    ->execute();
+  $count_activities = db_delete('activity')
+    ->condition('aid', $aids, 'IN')
+    ->execute();
+
+  return array('activities' => $count_activities, 'messages' => $count_messages);
+}
+
+/**
  * Load a Handler for a given hook.
  *
  * @param $hook
@@ -512,6 +537,14 @@ function activity_user_update(&$edit, $account, $category) {
 }
 
 /**
+ * Implements hook_user_delete().
+ */
+function activity_user_delete($account) {
+  $aids = db_query("SELECT aid FROM {activity} WHERE uid = :uid", array(":uid" => $account->uid))->fetchCol();
+  activity_delete($aids);
+}
+
+/**
  * Implements hook_node_update().
  */
 function activity_node_update($node) {
@@ -521,12 +554,28 @@ function activity_node_update($node) {
 }
 
 /**
+ * Implements hook_node_delete().
+ */
+function activity_node_delete($node) {
+  $aids = db_query("SELECT aid FROM {activity} WHERE nid = :nid", array(':nid' => $node->nid))->fetchCol();
+  activity_delete($aids);
+}
+
+/**
  * Implements hook_comment_update().
  */
 function activity_comment_update($comment) {
   entity_load('comment', array(), array(), TRUE);
   $records = db_query("SELECT * FROM {activity} WHERE type IN (:types) AND eid = :eid", array(":types" => array('comment_insert'), ":eid" => $comment->cid))->fetchAll();
   activity_recreate_messages($records);
+}
+
+/**
+ * Implements hook_comment_delete().
+ */
+function activity_comment_delete($comment) {
+  $aids = db_query("SELECT aid FROM {activity} WHERE type IN (:types) AND eid = :eid", array(":types" => array('comment_insert'), ":eid" => $comment->cid))->fetchCol();
+  activity_delete($aids);
 }
 
 /**
