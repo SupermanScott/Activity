@@ -124,7 +124,7 @@ function activity_views_data() {
             'field' => 'uid',
           ),
           array(
-            'value' => ':views-current-language',
+            'value' => 'en',
             'field' => 'language',
           ),
         ),
@@ -143,12 +143,12 @@ function activity_views_data() {
         'field' => 'aid',
         'extra' => array(
           array(
-            'value' => ':views-current-uid', // grab the personal message
+            'value' => 1, // grab the personal message
             'numeric' => TRUE,
             'field' => 'uid',
           ),
           array(
-            'value' => ':views-current-language',
+            'value' => 'en',
             'field' => 'language',
           ),
         ),
