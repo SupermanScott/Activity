@@ -407,7 +407,7 @@ class CommentActivityActionHandler extends NodeActivityActionHandler {
    * @return int
    */
   public function determineEid($context) {
-    return $objects['comment']->cid;
+    return $context['comment']->cid;
   }
 
   /**
