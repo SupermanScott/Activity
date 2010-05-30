@@ -207,6 +207,10 @@ function activity_configure_handler_form($form, $form_state, ActivityActionHandl
     '#type' => 'submit',
     '#value' => t('Save'),
   );
+  $form['save_update'] = array(
+    '#type' => 'submit',
+    '#value' => t('Save and Update Existing'),
+  );
   return $form;
 }
 
@@ -250,6 +254,17 @@ function activity_configure_handler_form_submit($form, &$form_state) {
     'templates' => $form_state['values']['messages'],
   );
   actions_save('activity_record', 'activity', $params, $form_state['values']['label'], $form['#actions_id']);
+
+  if ($form_state['values']['op'] == t('Save and Update Existing')) {
+    $batch = array(
+      'title' => t('Regenerating @label messages', array('@label' => $form_state['values']['label'])),
+      'operations' => array(
+        array('activity_recreate_messages_step', array($form['#actions_id'])),
+      ),
+      'file' => drupal_get_path('module', 'activity') . '/activity.admin.inc',
+    );
+    batch_set($batch);
+  }
 }
 
 /**
@@ -468,4 +483,58 @@ function activity_access_rebuild_process(&$context) {
     // If finished, delete the sandbox.
     unset($context['sandbox']);
   } 
+}
+
+/**
+ * Page callback to set up a batch process.
+ *
+ * @param $action
+ *  The row from the {actions} table.
+ */
+function activity_admin_recreate($action) {
+  $batch = array(
+    'title' => t('Regenerating @label messages', array('@label' => $action->label)),
+    'operations' => array(
+      array('activity_recreate_messages_step', array($action->aid)),
+    ),
+    'file' => drupal_get_path('module', 'activity') . '/activity.admin.inc',
+  );
+  batch_set($batch);
+  batch_process('admin/structure/activity');
+}
+
+/**
+ * Batch operation callback to generate new messages.
+ *
+ * @param $action_id
+ *   The {actions}.aid to generate messages for.
+ * @param array $context
+ *   The context of this batch operation.
+ */
+function activity_recreate_messages_step($action_id, &$context) {
+  if (!isset($context['sandbox']['last_aid'])) {
+    $context['sandbox'] = array(
+      'last_aid' => 0,
+      'progress' => 0,
+      'max' => db_query("SELECT COUNT(aid) FROM {activity} WHERE actions_id = :action_id", array(":action_id" => $action_id))->fetchField(),
+    );
+  }
+  $limit = 50;
+
+  $records = db_select('activity', 'a')
+    ->fields('a')
+    ->condition('a.actions_id', $action_id)
+    ->condition('a.aid', $context['sandbox']['last_aid'], '>')
+    ->range(0, $limit)
+    ->execute()
+    ->fetchAll();
+  $context['sandbox']['progress'] += count($records);
+  activity_recreate_messages($records);
+
+  if ($context['sandbox']['progress'] < $context['sandbox']['max']) {
+    $context['finished'] = $context['sandbox']['progress'] / $context['sandbox']['max'];
+  }
+  else {
+    unset($context['sandbox']);
+  }
 }

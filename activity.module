@@ -102,6 +102,16 @@ function activity_menu() {
     'file' => 'activity.admin.inc',
     'type' => MENU_CALLBACK,
   );
+  $items['admin/structure/activity/recreate/%actions/%'] = array(
+    'title' => 'Recreate Messages',
+    'description' => 'Recreate messages for the provided action',
+    'page callback' => 'activity_admin_recreate',
+    'page arguments' => array(4),
+    'access callback' => 'activity_batch_access',
+    'access arguments' => array(4, 5),
+    'file' => 'activity.admin.inc',
+    'type' => MENU_CALLBACK,
+  );
   $items['admin/structure/activity/delete/%actions'] = array(
     'title' => 'Delete',
     'description' => 'Remove an activity action and associated trigger assignment',
@@ -134,6 +144,18 @@ function activity_handler_load($aid) {
     return $handler;
   }
   return FALSE;
+}
+
+/**
+ * Access callback for batch access
+ *
+ * @param $action
+ *   The action row from {actions} table.
+ * @param $token
+ *   Token used for security protection.
+ */
+function activity_batch_access($action, $token) {
+  return user_access('administer activity') && drupal_valid_token($token, $action->aid);
 }
 
 /**
@@ -514,8 +536,9 @@ function theme_activity_settings_actions_list($vars) {
   $header = array(t('Label'), t('Hook'), t('Operations'));
   foreach ($vars['results'] as $result) {
     $operations = array(
-      l('configure', 'admin/structure/activity/configure/'. $result['aid']),
-      l('delete', 'admin/structure/activity/delete/'. $result['aid']),
+      l(t('configure'), 'admin/structure/activity/configure/'. $result['aid']),
+      l(t('delete'), 'admin/structure/activity/delete/'. $result['aid']),
+      l(t('update messages'), 'admin/structure/activity/recreate/' . $result['aid'] . '/' . drupal_get_token($result['aid'])),
     );
 
     $rows[] = array(
