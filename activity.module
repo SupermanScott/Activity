@@ -199,11 +199,21 @@ function activity_record($object, $context, $a1, $a2) {
 }
 
 /**
+ * Implements hook_views_api().
+ */
+function activity_views_api() {
+  return array(
+    'api' => '3.0-alpha1',
+    'path' => drupal_get_path('module', 'activity') . '/views',
+  );
+}
+
+/**
  * Implements hook_activity_api().
  */
 function node_activity_api() {
   return array(
-    'api' => '3-alpha',
+    'api' => '3.0-alpha1',
     'realms' => array(
       'node_author' => array(
         'name' => 'Node Author',
@@ -237,7 +247,7 @@ function node_activity_api() {
  */
 function comment_activity_api() {
   return array(
-    'api' => '3-alpha',
+    'api' => '3.0-alpha1',
     'realms' => array(
       'comment' => array(
         'name' => 'Comment',
@@ -261,7 +271,7 @@ function comment_activity_api() {
  */
 function user_activity_api() {
   return array(
-    'api' => '3-alpha',
+    'api' => '3.0-alpha1',
     'hooks' => array(
       'user_insert' => array(
         'batch' => TRUE,
@@ -362,7 +372,7 @@ function activity_cache_api_load() {
     foreach (module_implements('activity_api') as $module) {
       $module_result = module_invoke($module, 'activity_api');
       // @TODO: use version_compare: http://php.net/manual/en/function.version-compare.php
-      if ($module_result['api'] == '3-alpha') {
+      if ($module_result['api'] == '3.0-alpha1') {
         $module_result += array('realms' => array(), 'hooks' => array());
         foreach ($module_result['realms'] as $realm => $data) {
           $module_result['realms'][$realm] += array('module' => $module, 'file' => $module_result['file']);
