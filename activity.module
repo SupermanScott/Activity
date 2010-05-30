@@ -203,7 +203,7 @@ function activity_record($object, $context, $a1, $a2) {
           'type' => $handler->type,
           'nid' => $nid,
           'eid' => $eid,
-          'created' => $_SERVER['REQUEST_TIME'],
+          'created' => $handler->determineTimestamp($objects),
           'actions_id' => $context['aid'],
           'argument1' => $argument1,
           'argument2' => $argument2,

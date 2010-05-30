@@ -236,6 +236,18 @@ abstract class ActivityActionHandler {
   public function determineActor($objects) {
     return $GLOBALS['user']->uid;
   }
+
+  /**
+   * Return the timestamp that this Activity happened at.
+   *
+   * @param array $objects
+   *   The objects used in tokenization.
+   *
+   * @return int
+   */
+  public function determineTimestamp($objects) {
+    return $_SERVER['REQUEST_TIME'];
+  }
 }
 
 /**
@@ -267,6 +279,21 @@ class NodeActivityActionHandler extends ActivityActionHandler {
       return $objects['node']->uid;
     }
     return $GLOBALS['user']->uid;
+  }
+
+  /**
+   * Return the timestamp that this Activity happened at.
+   *
+   * @param array $objects
+   *   The objects used in tokenization.
+   *
+   * @return int
+   */
+  public function determineTimestamp($objects) {
+    if ($this->type == 'node_insert') {
+      return $objects['node']->created;
+    }
+    return $_SERVER['REQUEST_TIME'];
   }
 
   /**
@@ -429,6 +456,18 @@ class CommentActivityActionHandler extends NodeActivityActionHandler {
     return $objects['comment']->uid;
   }
 
+  /**
+   * Return the timestamp that this Activity happened at.
+   *
+   * @param array $objects
+   *   The objects used in tokenization.
+   *
+   * @return int
+   */
+  public function determineTimestamp($objects) {
+    return $objects['comment']->created;
+  }
+
    /**
    * Return an array of message types.
    */
@@ -534,6 +573,21 @@ class UserActivityActionHandler extends ActivityActionHandler {
       return $GLOBALS['user']->uid;
     }
     return $objects['user']->uid;
+  }
+
+  /**
+   * Return the timestamp that this Activity happened at.
+   *
+   * @param array $objects
+   *   The objects used in tokenization.
+   *
+   * @return int
+   */
+  public function determineTimestamp($objects) {
+    if ($this->type == 'user_insert') {
+      return $objects['user']->created;
+    }
+    return $_SERVER['REQUEST_TIME'];
   }
 
   /**
