@@ -216,7 +216,7 @@ function activity_configure_handler_form($form, $form_state, ActivityActionHandl
 function activity_message_test_submit($form, &$form_state) {
   $form_state['messages'] = array(
     'en' => array(
-      0 => 'Invalid Eid',
+      0 => 'Failed Validation',
     ),
   );
   $handler = activity_handler_load($form['#actions_id']);
@@ -226,7 +226,7 @@ function activity_message_test_submit($form, &$form_state) {
   $objects = $handler->loadObjects($form_state['values']['test']['eid']);
   drupal_alter('activity_objects', $objects, $handler->type);
 
-  if ($handler->valid($objects, $form_state['values'])) {
+  if ($handler->valid($objects, $form_state['values']['test']['additional_arguments']['argument1'], $form_state['values']['test']['additional_arguments']['argument2'])) {
     $form_state['messages'] = $handler->tokenize($objects);
   }
 

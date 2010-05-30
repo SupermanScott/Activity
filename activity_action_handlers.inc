@@ -70,17 +70,19 @@ abstract class ActivityActionHandler {
   public function optionForm(&$form, $form_state) {
   }
 
-  /**
+ /**
    * Determine if the current Action is valid for this object.
    *
    * @param array $objects
    *   The collection of objects for this action.
-   * @param array $context
-   *   The context array passed into by the triggering module.
+   * @param mixed $argument1
+   *   The first argument passed to the action callback.
+   * @param mixed $argument2
+   *   The second argument passed to the action callback.
    *
    * @return boolean
    */
-  public function valid($objects, $context) {
+  public function valid($objects, $argument1, $argument2) {
     return TRUE;
   }
 
@@ -302,7 +304,6 @@ class NodeActivityActionHandler extends ActivityActionHandler {
     foreach ($node_entity_info['view modes'] as $mode => $information) {
       $view_mode_options[$mode] = $information['label'];
     }
-
     // This is a node_view specific option.
     $form['view_modes'] = array(
       '#type' => 'checkboxes',
@@ -318,12 +319,14 @@ class NodeActivityActionHandler extends ActivityActionHandler {
    *
    * @param array $objects
    *   The collection of objects for this action.
-   * @param array $context
-   *   The context array passed into by the triggering module.
+   * @param mixed $argument1
+   *   The first argument passed to the action callback.
+   * @param mixed $argument2
+   *   The second argument passed to the action callback.
    *
    * @return boolean
    */
-  public function valid($objects, $context) {
+  public function valid($objects, $argument1, $argument2) {
     $types = array_filter($this->options['types']);
     $type_check = TRUE;
     $view_modes_check = TRUE;
@@ -338,7 +341,7 @@ class NodeActivityActionHandler extends ActivityActionHandler {
       // callback as $a1. activity_record() takes the two arguments and places
       // them into the context array under the 'additional_arguments' key.
       // @see activity_record
-      $view_modes_check = in_array($context['additional_arguments'][0], $view_modes);
+      $view_modes_check = in_array($argument1, $view_modes);
     }
     return $type_check && $view_modes_check;
   }
@@ -550,12 +553,14 @@ class UserActivityActionHandler extends ActivityActionHandler {
    *
    * @param array $objects
    *   The collection of objects for this action.
-   * @param array $context
-   *   The context array passed into by the triggering module.
+   * @param mixed $argument1
+   *   The first argument passed to the action callback.
+   * @param mixed $argument2
+   *   The second argument passed to the action callback.
    *
    * @return boolean
    */
-  public function valid($objects, $context) {
+  public function valid($objects, $argument1, $argument2) {
     $roles = array_filter($this->options['roles']);
     if (!empty($roles)) {
       $user_roles = array_keys($objects['user']->roles);

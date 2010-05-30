@@ -148,7 +148,7 @@ function activity_record($object, $context, $a1, $a2) {
       $objects = $handler->loadObjects($eid);
       drupal_alter('activity_objects', $objects, $handler->type);
 
-      if ($handler->valid($objects, $context)) {
+      if ($handler->valid($objects, $a1, $a2)) {
         $messages = $handler->tokenize($objects);
         $nid = $handler->determineNid($objects);
         $uid = $handler->determineActor($objects);
