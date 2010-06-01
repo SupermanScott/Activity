@@ -197,6 +197,10 @@ function activity_record($object, $context, $a1, $a2) {
           $argument2 = serialize($a2);
         }
 
+        // Recording one Activity is a number of different database inserts and
+        // this makes all the database inserts into one transaction.
+        $txn = db_transaction();
+
         // Write to {activity} table.
         $record = array(
           'uid' => $uid,
