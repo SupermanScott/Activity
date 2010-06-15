@@ -14,7 +14,7 @@ abstract class ActivityActionHandler {
   public $templates = array();
 
   /**
-   * Options provided vai the optionsFrom and optionsDefinition methods.
+   * Options provided via the optionsFrom and optionsDefinition methods.
    *
    * @var array
    */
