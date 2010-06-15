@@ -153,7 +153,7 @@ abstract class ActivityActionHandler {
     $messages = array();
     foreach ($this->templates as $language_id => $language_patterns) {
       foreach ($language_patterns as $target_key => $text) {
-        $uid = $this->get_uid($target_key, $objects);
+        $uid = $this->getUid($target_key, $objects);
         if ($uid !== FALSE) {
           // @TODO: pass in the language object.
           $message = token_replace($text, $objects, array('clear' => TRUE, 'sanitize' => FALSE));
@@ -177,7 +177,7 @@ abstract class ActivityActionHandler {
    *
    * @return int
    */
-  protected function get_uid($key, $objects) {
+  protected function getUid($key, $objects) {
     if ($key == 'public') {
       return 0;
     }
@@ -394,7 +394,7 @@ class NodeActivityActionHandler extends ActivityActionHandler {
       // If node->uid == $GLOBALS['user']->uid, this message template will be
       // used instead of $messages['node'].
       // This key 'current_user' is a fake one, and its existance is handled in
-      // get_uid() method.
+      // getUid() method.
       $messages['current_user'] = array(
         'title' => 'Updating User',
         'description' => 'The user who actually updated the node',
@@ -494,7 +494,7 @@ class CommentActivityActionHandler extends NodeActivityActionHandler {
    *
    * @return int
    */
-  protected function get_uid($key, $objects) {
+  protected function getUid($key, $objects) {
     if ($key == 'public') {
       return 0;
     }
