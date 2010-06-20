@@ -248,6 +248,20 @@ abstract class ActivityActionHandler {
   public function determineTimestamp($objects) {
     return $_SERVER['REQUEST_TIME'];
   }
+
+  /**
+   * Return whether or not the Activity is published.
+   *
+   * @param array $objects
+   *   The objects used in tokenization.
+   * @param int $actor
+   *   The uid of the actor for this activity.
+   */
+  public function isPublished($objects, $actor) {
+    // Key is to determine if the Actor is not blocked.
+    $status = db_query("SELECT status FROM {users} WHERE uid = :uid", array(":uid" => $actor))->fetchField();
+    return $status == 1;
+  }
 }
 
 /**
@@ -294,6 +308,18 @@ class NodeActivityActionHandler extends ActivityActionHandler {
       return $objects['node']->created;
     }
     return $_SERVER['REQUEST_TIME'];
+  }
+
+  /**
+   * Return whether or not the Activity is published.
+   *
+   * @param array $objects
+   *   The objects used in tokenization.
+   * @param int $actor
+   *   The uid of the actor for this activity.
+   */
+  public function isPublished($objects, $actor) {
+    return parent::isPublished($objects, $actor) && $objects['node']->status;
   }
 
   /**
@@ -468,6 +494,18 @@ class CommentActivityActionHandler extends NodeActivityActionHandler {
     return $objects['comment']->created;
   }
 
+  /**
+   * Return whether or not the Activity is published.
+   *
+   * @param array $objects
+   *   The objects used in tokenization.
+   * @param int $actor
+   *   The actor for the activity.
+   */
+  public function isPublished($objects, $actor) {
+    return parent::isPublished($objects, $actor) && $objects['comment']->status;
+  }
+
    /**
    * Return an array of message types.
    */
@@ -588,6 +626,18 @@ class UserActivityActionHandler extends ActivityActionHandler {
       return $objects['user']->created;
     }
     return $_SERVER['REQUEST_TIME'];
+  }
+
+  /**
+   * Return whether or not the Activity is published.
+   *
+   * @param array $objects
+   *   The objects used in tokenization.
+   * @param int $actor
+   *   The actor for this activity.
+   */
+  public function isPublished($objects, $actor) {
+    return parent::isPublished($objects) && $objects['user']->status == 1;
   }
 
   /**

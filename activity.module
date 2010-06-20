@@ -211,6 +211,7 @@ function activity_record($object, $context, $a1, $a2) {
           'actions_id' => $context['aid'],
           'argument1' => $argument1,
           'argument2' => $argument2,
+          'status' => $handler->isPublished($objects, $uid) ? 1 : 0,
         );
         drupal_alter('activity_record', $record, $context);
         drupal_write_record('activity', $record);
@@ -306,6 +307,42 @@ function activity_write_messages($messages, $aid) {
       );
       drupal_write_record('activity_targets', $target_record);
     }
+  }
+}
+
+/**
+ * Update {activity} records status based on a new event.
+ *
+ * @param array $activity_records
+ *   an array of activity records.
+ */
+function activity_update_status($activity_records) {
+  // Use this array to group the Activities by status so one query per status.
+  $updated_activity = array();
+
+  foreach ($activity_records as $record) {
+    $status = 1;
+
+    // Figure out if the status should be 1 or 0.
+    $handler = activity_handler_load($record->actions_id);
+    $objects = $handler->loadObjects($record->eid);
+    drupal_alter('activity_objects', $objects, $handler->type);
+
+    if (!$handler->isPublished($objects, $record->uid)) {
+      $status = 0;
+    }
+
+    $updated_activity[$status][] = $record->aid;
+  }
+
+  // Update each activity to their new status.
+  foreach ($updated_activity as $status => $aids) {
+    db_update('activity')
+      ->fields(array(
+          'status' => $status,
+        ))
+      ->condition('aid', $aids, 'IN')
+      ->execute();
   }
 }
 
@@ -540,8 +577,15 @@ function activity_cache_api_load() {
  */
 function activity_user_update(&$edit, $account, $category) {
   entity_load('user', array(), array(), TRUE);
+
   $records = db_query("SELECT * FROM {activity} WHERE uid = :uid", array(":uid" => $account->uid))->fetchAll();
+
+  // Recreate the messages with this new user information.
   activity_recreate_messages($records);
+
+  // Mark all activities by this user as published / unpublished based on user
+  // status.
+  activity_update_status($records);
 }
 
 /**
@@ -557,8 +601,13 @@ function activity_user_delete($account) {
  */
 function activity_node_update($node) {
   entity_load('node', array(), array(), TRUE);
+
+  // Recreate the messages with the new node information.
   $records = db_query("SELECT * FROM {activity} WHERE nid = :nid", array(":nid" => $node->nid))->fetchAll();
   activity_recreate_messages($records);
+
+  // Update the published / unpublished status field.
+  activity_update_status($records);
 }
 
 /**
@@ -574,8 +623,13 @@ function activity_node_delete($node) {
  */
 function activity_comment_update($comment) {
   entity_load('comment', array(), array(), TRUE);
+
+  // Recreate the messages.
   $records = db_query("SELECT * FROM {activity} WHERE type IN (:types) AND eid = :eid", array(":types" => array('comment_insert'), ":eid" => $comment->cid))->fetchAll();
   activity_recreate_messages($records);
+
+  // Mark comments as published / unpublished.
+  activity_update_status($records);
 }
 
 /**

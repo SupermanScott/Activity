@@ -69,6 +69,12 @@ function activity_schema() {
         'size' => 'big',
         'default' => NULL,
       ),
+      'status' => array(
+        'description' => 'Whether or not this Activity is published',
+        'type' => 'int',
+        'size' => 'tiny',
+        'default' => 1,
+      ),
     ),
     'primary key' => array('aid'),
     'indexes' => array(
