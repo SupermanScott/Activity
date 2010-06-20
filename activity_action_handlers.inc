@@ -259,6 +259,13 @@ abstract class ActivityActionHandler {
    */
   public function isPublished($objects, $actor) {
     // Key is to determine if the Actor is not blocked.
+    if ($actor == 0) {
+      // Anon user is blocked by default and cannot be unblocked. i.e their
+      // status can never and will never change, always being 0. Thus, anon
+      // gets a pass through.
+      return TRUE;
+    }
+
     $status = db_query("SELECT status FROM {users} WHERE uid = :uid", array(":uid" => $actor))->fetchField();
     return $status == 1;
   }
