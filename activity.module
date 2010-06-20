@@ -239,21 +239,23 @@ function activity_record($object, $context, $a1, $a2) {
  * Creates new messages for a set of activity records.
  *
  * @param array $records
- *   An array of {actvity} rows.
+ *   An array of {activity} rows.
  */
 function activity_recreate_messages(array $records) {
   foreach ($records as $record) {
-    // Delete existing messages.
-    $amids = db_query("SELECT amid FROM {activity_targets} WHERE aid = :aid", array(":aid" => $record->aid))->fetchCol();
-
+    // Load the handler and check it its batchable.
     $handler = activity_handler_load($record->actions_id);
+
     if ($handler->batch) {
+      $amids = db_query("SELECT amid FROM {activity_targets} WHERE aid = :aid", array(":aid" => $record->aid))->fetchCol();
+
       db_delete('activity_targets')
         ->condition('amid', $amids, 'IN')
         ->execute();
       db_delete('activity_messages')
         ->condition('amid', $amids, 'IN')
         ->execute();
+
       $objects = $handler->loadObjects($record->eid);
       drupal_alter('activity_objects', $objects, $handler->type);
 
