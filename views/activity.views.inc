@@ -79,6 +79,23 @@ function activity_views_data() {
       'handler' => 'views_handler_sort_date',
     ),
   );
+
+  $data['activity']['status'] = array(
+    'title' => t('Published'),
+    'help' => t('Whether or not the activity is published'),
+    'field' => array(
+      'handler' => 'views_handler_field_boolean',
+      'click sortable' => TRUE,
+    ),
+    'filter' => array(
+      'handler' => 'views_handler_filter_boolean_operator',
+      'label' => t('Published'),
+      'type' => 'yes-no',
+    ),
+    'sort' => array(
+      'handler' => 'views_handler_sort',
+    ),
+  );
   
   $data['activity_access']['table']['group'] = t('Activity Access');
   $data['activity_access']['table']['join'] = array(
