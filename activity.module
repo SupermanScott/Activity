@@ -182,11 +182,12 @@ function activity_record($object, $context, $a1, $a2) {
     if (isset($eid)) {
       $objects = $handler->loadObjects($eid);
       drupal_alter('activity_objects', $objects, $handler->type);
+      $uid = $handler->determineActor($objects);
+      $timestamp = $handler->determineTimestamp($objects);
 
-      if ($handler->valid($objects, $a1, $a2)) {
+      if ($handler->valid($eid, $uid, $timestamp, $objects, $a1, $a2)) {
         $messages = $handler->tokenize($objects);
         $nid = $handler->determineNid($objects);
-        $uid = $handler->determineActor($objects);
 
         $argument1 = NULL;
         $argument2 = NULL;
@@ -207,7 +208,7 @@ function activity_record($object, $context, $a1, $a2) {
           'type' => $handler->type,
           'nid' => $nid,
           'eid' => $eid,
-          'created' => $handler->determineTimestamp($objects),
+          'created' => $timestamp,
           'actions_id' => $context['aid'],
           'argument1' => $argument1,
           'argument2' => $argument2,
@@ -246,20 +247,20 @@ function activity_recreate_messages(array $records) {
   foreach ($records as $record) {
     // Load the handler and check it its batchable.
     $handler = activity_handler_load($record->actions_id);
-
     if ($handler->batch) {
       $amids = db_query("SELECT amid FROM {activity_targets} WHERE aid = :aid", array(":aid" => $record->aid))->fetchCol();
 
-      db_delete('activity_targets')
-        ->condition('amid', $amids, 'IN')
-        ->execute();
-      db_delete('activity_messages')
-        ->condition('amid', $amids, 'IN')
-        ->execute();
+      if (!empty($amids)) {
+        db_delete('activity_targets')
+          ->condition('amid', $amids, 'IN')
+          ->execute();
+        db_delete('activity_messages')
+          ->condition('amid', $amids, 'IN')
+          ->execute();
+      }
 
       $objects = $handler->loadObjects($record->eid);
       drupal_alter('activity_objects', $objects, $handler->type);
-
       $a1 = NULL;
       $a2 = NULL;
       if (isset($record->argument1)) {
@@ -268,8 +269,7 @@ function activity_recreate_messages(array $records) {
       if (isset($record->argument2)) {
         $a2 = unserialize($record->argument2);
       }
-
-      if ($handler->valid($objects, $a1, $a2)) {
+      if ($handler->valid($record->eid, $record->uid, $record->created, $objects, $a1, $a2)) {
         activity_write_messages($handler->tokenize($objects), $record->aid);
       }
       else {

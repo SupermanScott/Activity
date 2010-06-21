@@ -75,11 +75,26 @@ abstract class ActivityActionHandler {
    *   The form_state from FAPI.
    */
   public function optionForm(&$form, $form_state) {
+    $options = drupal_map_assoc(range(0, 7200, 300), 'format_interval');
+    $options[0] = t('Unlimited');
+    $form['window'] = array(
+      '#type' => 'select',
+      '#title' => t('Activity Window'),
+      '#description' => t('Prevent repeat Activity from the same user for the same entity within this interval'),
+      '#options' => $options,
+      '#default_value' => $this->options['window'],
+    );
   }
 
  /**
    * Determine if the current Action is valid for this object.
    *
+   * @param $eid
+   *   The entity id for the activity.
+   * @param $actor
+   *   The uid of the actor for this activity.
+   * @param $timestamp
+   *   Unix timestamp when this activity occurred.
    * @param array $objects
    *   The collection of objects for this action.
    * @param mixed $argument1
@@ -89,7 +104,19 @@ abstract class ActivityActionHandler {
    *
    * @return boolean
    */
-  public function valid($objects, $argument1, $argument2) {
+  public function valid($eid, $actor, $timestamp, $objects, $argument1, $argument2) {
+    if (!empty($this->options['window'])) {
+      $count = db_select('activity', 'a')
+        ->fields('a', array('aid'))
+        ->condition('eid', $eid, '=')
+        ->condition('uid', $actor, '=')
+        ->condition('created', $timestamp - $this->options['window'], '>')
+        ->condition('actions_id', $this->actions_id, '=')
+        ->countQuery()
+        ->execute()
+        ->fetchField();
+      return $count == 0;
+    }
     return TRUE;
   }
 
@@ -384,6 +411,12 @@ class NodeActivityActionHandler extends ActivityActionHandler {
   /**
    * Determine if the current Action is valid for this object.
    *
+   * @param $eid
+   *   The entity id for the activity.
+   * @param $actor
+   *   The uid of the actor for this activity.
+   * @param $timestamp
+   *   Unix timestamp when this activity occurred.
    * @param array $objects
    *   The collection of objects for this action.
    * @param mixed $argument1
@@ -393,7 +426,7 @@ class NodeActivityActionHandler extends ActivityActionHandler {
    *
    * @return boolean
    */
-  public function valid($objects, $argument1, $argument2) {
+  public function valid($eid, $actor, $timestamp, $objects, $argument1, $argument2) {
     $types = array_filter($this->options['types']);
     $type_check = TRUE;
     $view_modes_check = TRUE;
@@ -410,7 +443,7 @@ class NodeActivityActionHandler extends ActivityActionHandler {
       // @see activity_record
       $view_modes_check = in_array($argument1, $view_modes);
     }
-    return $type_check && $view_modes_check;
+    return parent::valid($eid, $actor, $timestamp, $objects, $argument1, $argument2) && $type_check && $view_modes_check;
   }
 
   /**
@@ -669,6 +702,12 @@ class UserActivityActionHandler extends ActivityActionHandler {
   /**
    * Determine if the current Action is valid for this object.
    *
+   * @param $eid
+   *   The entity id for the activity.
+   * @param $actor
+   *   The uid of the actor for this activity.
+   * @param $timestamp
+   *   Unix timestamp when this activity occurred.
    * @param array $objects
    *   The collection of objects for this action.
    * @param mixed $argument1
@@ -678,14 +717,14 @@ class UserActivityActionHandler extends ActivityActionHandler {
    *
    * @return boolean
    */
-  public function valid($objects, $argument1, $argument2) {
+  public function valid($eid, $actor, $timestamp, $objects, $argument1, $argument2) {
     $roles = array_filter($this->options['roles']);
     if (!empty($roles)) {
       $user_roles = array_keys($objects['user']->roles);
       $intersect = array_intersect($user_roles, $roles);
-      return !empty($intersect);
+      return parent::valid($eid, $actor, $timestamp, $objects, $argument1, $argument2) && !empty($intersect);
     }
-    return TRUE;
+    return parent::valid($eid, $actor, $timestamp, $objects, $argument1, $argument2);
   }
 }
 
