@@ -427,7 +427,7 @@ function activity_access_batch_set($form, &$form_state) {
     'file' => drupal_get_path('module', 'activity') . '/activity.admin.inc',
   );
   batch_set($batch);
-  $form_state['redirect'] = 'admin/config/activity';
+  $form_state['redirect'] = 'admin/config/content/activity';
 }
 
 /**

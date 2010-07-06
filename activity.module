@@ -80,7 +80,7 @@ function activity_menu() {
     'type' => MENU_LOCAL_TASK,
     'weight' => 2,
   );
-  $items['admin/config/activity'] = array(
+  $items['admin/config/content/activity'] = array(
     'title' => 'Activity',
     'description' => 'Modify the settings for how activity behaves',
     'page callback' => 'drupal_get_form',
@@ -89,7 +89,7 @@ function activity_menu() {
     'file' => 'activity.admin.inc',
     'type' => MENU_NORMAL_ITEM,
   );
-  $items['admin/config/activity/settings'] = array(
+  $items['admin/config/content/activity/settings'] = array(
     'title' => 'Settings',
     'type' => MENU_DEFAULT_LOCAL_TASK,
   );
