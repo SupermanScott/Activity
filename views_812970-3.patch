@@ -1,0 +1,59 @@
+Index: views.module
+===================================================================
+RCS file: /cvs/drupal-contrib/contributions/modules/views/views.module,v
+retrieving revision 1.341.4.25
+diff -u -p -r1.341.4.25 views.module
+--- views.module	31 May 2010 21:31:47 -0000	1.341.4.25
++++ views.module	5 Jul 2010 23:58:42 -0000
+@@ -1155,6 +1155,25 @@ function views_views_query_substitutions
+ }
+ 
+ /**
++ * Implements hook_query_TAG_alter().
++ *
++ * This is the hook_query_alter() for queries tagged by Views and is used to
++ * add in substitutions from hook_views_query_substitutions().
++ */
++function views_query_views_alter(QueryAlterableInterface $query) {
++  $subsitutions = $query->getMetaData('views_substitutions');
++  $tables =& $query->getTables();
++  
++  foreach ($tables as $table_name => $table_metadata) {
++    foreach ($table_metadata['arguments'] as $replacement_key => $value) {
++      if (isset($subsitutions[$value])) {
++        $tables[$table_name]['arguments'][$replacement_key] = $subsitutions[$value];
++      }
++    }
++  }
++}
++
++/**
+  * Embed a view using a PHP snippet.
+  *
+  * This function is meant to be called from PHP snippets, should one wish to
+Index: plugins/views_plugin_query_default.inc
+===================================================================
+RCS file: /cvs/drupal-contrib/contributions/modules/views/plugins/Attic/views_plugin_query_default.inc,v
+retrieving revision 1.1.4.19
+diff -u -p -r1.1.4.19 views_plugin_query_default.inc
+--- plugins/views_plugin_query_default.inc	14 May 2010 17:07:10 -0000	1.1.4.19
++++ plugins/views_plugin_query_default.inc	5 Jul 2010 23:58:43 -0000
+@@ -984,7 +984,7 @@ class views_plugin_query_default extends
+     }
+ 
+     // Go ahead and build the query.
+-    $query = db_select($this->base_table, $this->base_table);
++    $query = db_select($this->base_table, $this->base_table)->addTag('views');
+ 
+     $joins = $where = $having = $orderby = $groupby = '';
+     $fields = $distinct = array();
+@@ -1027,6 +1027,9 @@ class views_plugin_query_default extends
+       $query->condition($this->build_condition('where'));
+     }
+ 
++    // Add all query substitutions as metadata.
++    $query->addMetaData('views_substitutions', module_invoke_all('views_query_substitutions', $this));
++
+     return $query;
+   }
+ 
