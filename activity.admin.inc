@@ -417,9 +417,7 @@ function activity_delete_confirm_submit($form, &$form_state) {
 function activity_access_batch_set($form, &$form_state) {
   // Address usability concern where the realms arn't set.
   $submitted_realms = array_filter($form_state['values']['activity_access_realms']);
-  if ($submitted_realms != activity_access_realms()) {
-    variable_set('activity_access_realms', $submitted_realms);
-  }
+  variable_set('activity_access_realms', $submitted_realms);
 
   $batch = array(
     'title' => t('Rebuilding Activity Access Table'),
@@ -429,7 +427,7 @@ function activity_access_batch_set($form, &$form_state) {
     'file' => drupal_get_path('module', 'activity') . '/activity.admin.inc',
   );
   batch_set($batch);
-  $form_state['redirect'] = 'admin/settings/activity';
+  $form_state['redirect'] = 'admin/config/activity';
 }
 
 /**
@@ -449,21 +447,28 @@ function activity_access_rebuild_process(&$context) {
     // Activity can be happening on the site. Any Activity happening after this point
     // will not be rebuilt. This is ok, as in that case, the new Activity will receive
     // any and all new Activity Access Realms.
-    $context['sandbox']['max'] = db_result(db_query("SELECT COUNT(aid) FROM {activity}"));
+    $context['sandbox']['max'] = db_query("SELECT COUNT(aid) FROM {activity}")->fetchField();
   }
   // Process 100 Activities at a time.
   $limit = 100;
 
-  $activities = db_query_range("SELECT * FROM {activity} WHERE aid > %d ORDER BY aid ASC", $context['sandbox']['last_aid'], 0, $limit);
-  while ($activity = db_fetch_object($activities)) {
+  $activities = db_select('activity', 'a')
+    ->fields('a')
+    ->condition('aid', $context['sandbox']['last_aid'], '>')
+    ->range(0, $limit)
+    ->execute()
+    ->fetchAll();
+
+  foreach ($activities as $activity) {
     $grants = activity_get_grants($activity);
     // Delete existing records.
-    db_query("DELETE FROM {activity_access} WHERE aid = %d", $activity->aid);
+    db_delete('activity_access')
+      ->condition('aid', $activity->aid)
+      ->execute();
 
     // Insert new ones.
     foreach ($grants as $realm => $values) {
       foreach ($values as $value) {
-        // insert one by one. In D7 we can use the DBTNG to insert multiple
         $perm = new stdClass();
         $perm->aid = $activity->aid;
         $perm->realm = $realm;
