@@ -214,18 +214,19 @@ function activity_record($object, $context, $a1, $a2) {
           'argument2' => $argument2,
           'status' => $handler->isPublished($objects, $uid) ? 1 : 0,
         );
+        $record = (object) $record;
         drupal_alter('activity_record', $record, $context);
         drupal_write_record('activity', $record);
 
         drupal_alter('activity_messages', $messages, $handler->name, $objects);
 
         // Write messages to {activity_messages} table.
-        activity_write_messages($messages, $record['aid']);
+        activity_write_messages($messages, $record->aid);
 
         foreach (activity_get_grants($record) as $realm => $values) {
           foreach ($values as $value) {
             $row = array(
-              'aid' => $record['aid'],
+              'aid' => $record->aid,
               'realm' => $realm,
               'value' => $value,
             );
