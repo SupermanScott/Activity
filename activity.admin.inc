@@ -175,12 +175,12 @@ function activity_configure_handler_form($form, $form_state, ActivityActionHandl
       'argument1' => array(
         '#type' => 'textfield',
         '#title' => t('Argument 1'),
-        '#size' => 5,
+        '#size' => 25,
       ),
       'argument2' => array(
         '#type' => 'textfield',
         '#title' => t('Argument 2'),
-        '#size' => 5,
+        '#size' => 25,
       ),
     ),
     'submit_test' => array(
