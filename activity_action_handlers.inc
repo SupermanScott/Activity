@@ -273,7 +273,7 @@ abstract class ActivityActionHandler {
    * @return int
    */
   public function determineTimestamp($objects) {
-    return $_SERVER['REQUEST_TIME'];
+    return REQUEST_TIME;
   }
 
   /**
@@ -341,7 +341,7 @@ class NodeActivityActionHandler extends ActivityActionHandler {
     if ($this->type == 'node_insert') {
       return $objects['node']->created;
     }
-    return $_SERVER['REQUEST_TIME'];
+    return REQUEST_TIME;
   }
 
   /**
@@ -665,7 +665,7 @@ class UserActivityActionHandler extends ActivityActionHandler {
     if ($this->type == 'user_insert') {
       return $objects['user']->created;
     }
-    return $_SERVER['REQUEST_TIME'];
+    return REQUEST_TIME;
   }
 
   /**
