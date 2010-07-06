@@ -616,7 +616,7 @@ class UserActivityActionHandler extends ActivityActionHandler {
    * Load objects for tokenization.
    *
    * @param int $eid
-	 *   The entity identifier for this Activity.
+   *   The entity identifier for this Activity.
    *
    * @return array
    */
