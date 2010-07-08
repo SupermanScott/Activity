@@ -83,10 +83,7 @@ function activity_admin_overview() {
  * Form builder to select what type of Activity to record.
  */
 function activity_create_form($form, &$form_state) {
-  $hooks = activity_cache_get('hooks');
-  foreach ($hooks as $hook => $information) {
-    $hook_options[$hook] = t($information['name']);
-  }
+  $hook_options = activity_form_options_hooks();
 
   $form['label'] = array(
     '#type' => 'textfield',

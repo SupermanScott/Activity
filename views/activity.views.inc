@@ -62,7 +62,8 @@ function activity_views_data() {
       'handler' => 'views_handler_field',
     ),
     'filter' => array(
-      'handler' => 'views_handler_filter_string',
+      'handler' => 'views_handler_filter_in_operator',
+      'options callback' => 'activity_form_options_hooks',
     ),
     'argument' => array(
       'handler' => 'views_handler_argument_string',

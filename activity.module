@@ -536,6 +536,19 @@ function activity_get_grants($record) {
   return $grants;
 }
 
+/**
+ * Option callback used to present the available hooks.
+ */
+function activity_form_options_hooks() {
+  $hooks = activity_cache_get('hooks');
+  $hook_options = array();
+  foreach ($hooks as $hook => $information) {
+    $hook_options[$hook] = t($information['name']);
+  }
+
+  return $hook_options;
+}
+
 // CRUD Functions
 function activity_cache_get($type) {
   $api_information = activity_cache_api_load();

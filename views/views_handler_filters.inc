@@ -35,6 +35,7 @@ class activity_views_handler_filter_access extends views_handler_filter {
       '#type' => 'checkboxes',
       '#description' => t('Choose the realms to filter the Activity rows'),
       '#options' => $options,
+
       '#default_value' => $this->options['realms'],
     );
   }
@@ -52,7 +53,5 @@ class activity_views_handler_filter_access extends views_handler_filter {
         $realm_values += module_invoke($allowed_realms[$realm]['module'], 'activity_access_grants', user_load(1));
       }
     }
-
-    dpm($realm_values);
   }
 }
