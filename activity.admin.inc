@@ -271,9 +271,9 @@ function activity_configure_handler_form_submit($form, &$form_state) {
  * @ingroup forms
  * @see activity_actions_delete_form_submit()
  */
-function activity_actions_delete_form(&$form_state, $action) {
+function activity_actions_delete_form($form, &$form_state, $action) {
   $form['aid'] = array(
-    '#type' => 'hidden',
+    '#type' => 'value',
     '#value' => $action->aid,
   );
   return confirm_form($form,
@@ -293,8 +293,10 @@ function activity_actions_delete_form_submit($form, &$form_state) {
   $aid = $form_state['values']['aid'];
   $action = actions_load($aid);
   actions_delete($aid);
-  watchdog('user', 'Deleted action %aid (%action)', array('%aid' => $aid, '%action' => $action->description));
-  drupal_set_message(t('Action %action was deleted', array('%action' => $description)));
+
+
+  watchdog('user', 'Deleted action %aid (%action)', array('%aid' => $aid, '%action' => $action->label));
+  drupal_set_message(t('Action %action was deleted', array('%action' => $$action->label)));
   $form_state['redirect'] = 'admin/structure/activity';
 }
 
