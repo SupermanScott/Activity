@@ -178,12 +178,22 @@ abstract class ActivityActionHandler {
    */
   public function tokenize($objects) {
     $messages = array();
+    $languages = array();
     foreach ($this->templates as $language_id => $language_patterns) {
       foreach ($language_patterns as $target_key => $text) {
         $uid = $this->getUid($target_key, $objects);
         if ($uid !== FALSE) {
-          // @TODO: pass in the language object.
-          $message = token_replace($text, $objects, array('clear' => TRUE, 'sanitize' => FALSE));
+          $options = array(
+            'clear' => TRUE,
+            'sanitize' => FALSE,
+          );
+          if (drupal_multilingual()) {
+            if (empty($languages)) {
+              $languages = language_list();
+            }
+            $options['language'] = $languages[$language_id];
+          }
+          $message = token_replace($text, $objects, $options);
           if (!empty($message)) {
             $messages[$language_id][$uid] = $message;
           }
