@@ -1,0 +1,64 @@
+<?php
+// $Id: $
+// @todo: come up with a way to have this really inherit from DrupalUnitTestCase
+class ActivityUnitTest extends DrupalWebTestCase {
+  public static function getInfo() {
+    return array(
+      'name' => t('Activity Core Unit tests'),
+      'description' => t('Unit tests for the Activity module'),
+      'group' => t('Activity'),
+    );
+  }
+
+  public function setUp() {
+    parent::setUp('activity');
+  }
+
+  public function testNodeActivityInsert() {
+    $handler = activity_load_handler('node_insert');
+    $handler->templates = array(
+      'en' => array(
+        'node' => 'Node Author Message',
+        'public' => 'Public Message',
+      ),
+    );
+
+    $handler->options = array('types' => array(), 'view_modes' => array());
+    $handler->actions_id = -1;
+    $handler->label = 'Test node insert';
+
+    $node1 = $this->drupalCreateNode(array('type' => 'article'));
+    $node2 = $this->drupalCreateNode(array('type' => 'page', 'status' => 0));
+    $objects1 = $handler->loadObjects($node1->nid);
+    $objects2 = $handler->loadObjects($node2->nid);
+
+    // Make sure loaded objects match what is expected.
+    $this->assertEqual($node1->nid, $objects1['node']->nid, t('Loaded up the correct article node'));
+    $this->assertEqual($node2->nid, $objects2['node']->nid, t('Loaded up the correct page node'));
+
+    // Mock around the valid method.
+    $this->assertEqual($handler->valid($node1->nid, 1, REQUEST_TIME, $objects1, NULL, NULL), t('Activity handler correctly says article node is a valid activity'));
+    $this->assertEqual($handler->valid($node2->nid, 1, REQUEST_TIME, $objects2, NULL, NULL), t('Activity handler correctly says page node is a valid activity'));
+
+    $handler->options['types'] = array('article' => 'article');
+    $this->assertEqual($handler->valid($node1->nid, 1, REQUEST_TIME, $objects1, NULL, NULL), t('Activity handler correctly checks article node type'));
+    $this->assertEqual(!$handler->valid($node2->nid, 1, REQUEST_TIME, $objects2, NULL, NULL), t('Activity handler correctly checks page node type'));
+
+    $handler->options['types'] = array('page' => 'page');
+    $this->assertEqual(!$handler->valid($node1->nid, 1, REQUEST_TIME, $objects1, NULL, NULL), t('Activity handler prevents article from being valid'));
+    $this->assertEqual($handler->valid($node2->nid, 1, REQUEST_TIME, $objects2, NULL, NULL), t('Activity handler properly validates page node'));
+
+    // Ensure the proper eid is returned.
+    $this->assertEqual($node1->nid, $handler->determineEid($objects1), t('Proper Eid is returned'));
+
+    // Ensure the proper actor is returned.
+    $this->assertEqual($node1->uid, $handler->determineActor($objects1), t('Proper Actor id is returned'));
+
+    // Check timestamp.
+    $this->assertEqual($node2->created, $handler->determineTimestamp($objects2), t('Returned proper timestamp'));
+
+    // Check published flag.
+    $this->assertTrue($handler->isPublished($objects1, $node1->uid), t('Correctly flagged activity as published'));
+    $this->assertTrue(!$handler->isPublished($objects2, $node2->uid), t('Correctly flagged activity as not published'));
+  }
+}

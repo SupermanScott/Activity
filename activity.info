@@ -11,3 +11,4 @@ files[] = activity.tokens.inc
 files[] = views/views_handler_fields.inc
 files[] = views/views_handler_filters.inc
 files[] = views/views_handler_arguments.inc
+files[] = tests/activity_unit.test
