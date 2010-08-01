@@ -116,7 +116,8 @@ function activity_create_form_submit($form, &$form_state) {
   $aid = actions_save('activity_record', 'activity', array(), $form_state['values']['label']);
 
   // Now save the aid away to the parameters.
-  actions_save('activity_record', 'activity', array('aid' => $aid, 'templates' => array(), 'options' => array()), $form_state['values']['label'], $aid);
+  $handler = activity_load_handler($form_state['values']['hook']);
+  actions_save('activity_record', 'activity', array('aid' => $aid, 'templates' => array(), 'options' => ActivityActionHandler::defaultOptions($handler->optionDefinition())), $form_state['values']['label'], $aid);
 
   // Write to the trigger assignments.
   $record = array(

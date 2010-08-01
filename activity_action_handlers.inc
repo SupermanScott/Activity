@@ -49,10 +49,35 @@ abstract class ActivityActionHandler {
   public $batch;
 
   /**
+   * Generates the default options from the provided option definition.
+   *
+   * @param array $definition
+   *   Option definition from the handler.
+   *
+   * @return array
+   *   Default options.
+   */
+  public static function defaultOptions(array $definition) {
+    $accumlator = array();
+    foreach (element_children($definition) as $child) {
+      if (isset($definition[$child]['#default_value'])) {
+        $accumlator[$child] = $definition[$child]['#default_value'];
+      }
+      else {
+        $grand_children = element_children($definition[$child]);
+        if (!empty($grand_children)) {
+          $accumlator[$child] = self::defaultOptions($definition[$child]);
+        }
+      }
+    }
+    return $accumlator;
+  }
+
+  /**
    * Load objects for tokenization.
    *
    * @param int $eid
-	 *   The entity identifier for this Activity.
+   *   The entity identifier for this Activity.
    *
    * @return array
    */
@@ -64,6 +89,11 @@ abstract class ActivityActionHandler {
    * @return array.
    */
   public function optionDefinition() {
+    return array(
+      'window' => array(
+        '#default_value' => 0,
+      ),
+    );
   }
 
   /**
@@ -381,6 +411,22 @@ class NodeActivityActionHandler extends ActivityActionHandler {
   }
 
   /**
+   * Return option defaults and structure.
+   *
+   * @return array.
+   */
+  public function optionDefinition() {
+    $options = parent::optionDefinition();
+    $options['types'] = array(
+      '#default_value' => array(),
+    );
+    $options['view_modes'] = array(
+      '#default_value' => array(),
+    );
+    return $options;
+  }
+
+  /**
    * Display an FAPI form.
    *
    * @param &$form
@@ -688,6 +734,20 @@ class UserActivityActionHandler extends ActivityActionHandler {
    */
   public function isPublished($objects, $actor) {
     return parent::isPublished($objects) && $objects['user']->status == 1;
+  }
+
+  /**
+   * Return option defaults and structure.
+   *
+   * @return array.
+   */
+  public function optionDefinition() {
+    $options = parent::optionDefinition();
+
+    $options['roles'] = array(
+      '#default_value' => array(),
+    );
+    return $options;
   }
 
   /**
