@@ -126,7 +126,7 @@ function activity_create_form_submit($form, &$form_state) {
     'aid' => $aid
   );
   drupal_write_record('trigger_assignments', $record);
-  $form_state['redirect'] = 'admin/structure/activity/configure/' . $aid;
+  $form_state['redirect'] = array('admin/structure/activity/configure/' . $aid, array('query' => array('new' => 1)));
 }
 
 /**
@@ -208,7 +208,12 @@ function activity_configure_handler_form($form, $form_state, ActivityActionHandl
   $form['save_update'] = array(
     '#type' => 'submit',
     '#value' => t('Save and Update Existing'),
-    '#access' => $action->batch,
+    '#access' => $action->batch && empty($_GET['new']),
+  );
+  $form['save_create'] = array(
+    '#type' => 'submit',
+    '#value' => t('Save and Create'),
+    '#access' => $action->batch && !empty($_GET['new']),
   );
   return $form;
 }
@@ -259,6 +264,16 @@ function activity_configure_handler_form_submit($form, &$form_state) {
       'title' => t('Regenerating @label messages', array('@label' => $form_state['values']['label'])),
       'operations' => array(
         array('activity_recreate_messages_step', array($form['#actions_id'])),
+      ),
+      'file' => drupal_get_path('module', 'activity') . '/activity.admin.inc',
+    );
+    batch_set($batch);
+  }
+  elseif ($form_state['values']['op'] == t('Save and Create')) {
+    $batch = array(
+      'title' => t('Generating @label messages', array('@label' => $form_state['values']['label'])),
+      'operations' => array(
+        array('activity_batch_regenerate_step', array($form['#actions_id'])),
       ),
       'file' => drupal_get_path('module', 'activity') . '/activity.admin.inc',
     );
