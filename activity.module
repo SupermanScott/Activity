@@ -7,29 +7,6 @@
  */
 
 /**
- * Implements hook_hook_info().
- */
-function activity_hook_info() {
-  return array(
-    'activity_api' => array(
-      'group' => 'activity',
-    ),
-    'activity_objects_alter' => array(
-      'group' => 'activity',
-    ),
-    'activity_record_alter' => array(
-      'group' => 'activity',
-    ),
-    'activity_messages_alter' => array(
-      'group' => 'activity',
-    ),
-    'activity_access_records_alter' => array(
-      'group' => 'activity',
-    ),
-  );
-}
-
-/**
  * Implements hook_menu().
  */
 function activity_menu() {
@@ -387,8 +364,7 @@ function node_activity_api() {
         'name' => 'Node Update',
       ),
     ),
-    // For almost all modules this will not be required thanks to hook_hook_info
-    // but for adding this to core behavior, this is used.
+    // Move the activity hooks into a seperate file.
     'file' => drupal_get_path('module', 'activity') . '/modules/node.activity.inc',
   );
 }
@@ -411,8 +387,7 @@ function comment_activity_api() {
         'name' => 'Comment Insert',
       ),
     ),
-    // For almost all modules this will not be required thanks to hook_hook_info
-    // but for adding this to core behavior, this is used.
+    // Move the activity hooks into a seperate file.
     'file' => drupal_get_path('module', 'activity') . '/modules/comment.activity.inc',
   );
 }
@@ -512,17 +487,11 @@ function activity_enabled_languages() {
  * 
  */
 function activity_get_grants($record) {
-  $files = &drupal_static(__FUNCTION__, array());
   $record = (object) $record;
   $grants = array();
   $realms = activity_cache_get('realms');
 
   foreach ($realms as $realm_id => $information) {
-    if (isset($information['file']) && !isset($files[$information['file']])) {
-      $files[$information['file']] = TRUE;
-      require_once './' . $information['file'];
-    }
-
     $module_grants = module_invoke($information['module'], 'activity_grants', $record);
     foreach ($module_grants as $realm => $values) {
       if (in_array($realm, array_keys($realms))) {
@@ -565,12 +534,16 @@ function activity_cache_api_load() {
       if ($module_result['api'] == '3.0-alpha1') {
         $module_result += array('realms' => array(), 'hooks' => array());
         foreach ($module_result['realms'] as $realm => $data) {
-          $module_result['realms'][$realm] += array('module' => $module, 'file' => $module_result['file']);
+          $module_result['realms'][$realm] += array('module' => $module);
         }
 
         $info_cache['hooks'] += $module_result['hooks'];
         $info_cache['realms'] += $module_result['realms'];
         $info_cache['all_realms'] += $module_result['realms'];
+
+        if (isset($module_result['file'])) {
+          require_once './' . $module_result['file'];
+        }
       }
 
       $enabled_realms = variable_get('activity_access_realms', array('node_author'));
