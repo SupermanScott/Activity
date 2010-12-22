@@ -336,6 +336,18 @@ abstract class ActivityActionHandler {
     $status = db_query("SELECT status FROM {users} WHERE uid = :uid", array(":uid" => $actor))->fetchField();
     return $status == 1;
   }
+
+  /**
+   * List all eids for this handler, used for batch regeneration and backfilling.
+   *
+   * @param int $offset
+   *   The offset for the query.
+   * @param int $limit
+   *   The limit for the query.
+   */
+  public function listEids($offset, $limit) {
+    return array('total' => 0, 'arguments' => array());
+  }
 }
 
 /**
@@ -531,6 +543,38 @@ class NodeActivityActionHandler extends ActivityActionHandler {
 
     return $messages;
   }
+
+  /**
+   * List all eids for this handler, used for batch regeneration and backfilling.
+   *
+   * @param int $offset
+   *   The offset for the query.
+   * @param int $limit
+   *   The limit for the query.
+   */
+  public function listEids($offset, $limit) {
+    $types = array_filter($this->options['types']);
+    // Because the op view currently isn't batchable, it can be skipped.
+
+    $query = db_select('node', 'n')
+      ->fields('n', array('nid'), 'eid')
+      ->range($offset, $limit);
+    if (!empty($types)) {
+      $query->condition('type', $types, 'IN');
+    }
+
+    $count_query = clone $query;
+    $total = $count_query->countQuery()->execute()->fetchField();
+
+    $arguments = array();
+    foreach ($query->execute()->fetchCol() as $eid) {
+      $arguments[$eid] = array(
+        'argument1' => NULL,
+        'argument2' => NULL,
+      );
+    }
+    return array('total' => $total, 'arguments' => $arguments);
+  }
 }
 
 /**
@@ -644,6 +688,38 @@ class CommentActivityActionHandler extends NodeActivityActionHandler {
     }
 
     return FALSE;
+  }
+
+  /**
+   * List all eids for this handler, used for batch regeneration and backfilling.
+   *
+   * @param int $offset
+   *   The offset for the query.
+   * @param int $limit
+   *   The limit for the query.
+   */
+  public function listEids($offset, $limit) {
+    $types = array_filter($this->options['types']);
+
+    $query = db_select('comment', 'c')
+      ->fields('c', array('cid'), 'eid')
+      ->range($offset, $limit);
+    if (!empty($types)) {
+      $node_alias = $query->join('node', 'n', 'n.nid = c.nid');
+      $query->condition($node_alias . '.type', $types, 'IN');
+    }
+
+    $count_query = clone $query;
+    $total = $count_query->countQuery()->execute()->fetchField();
+
+    $arguments = array();
+    foreach ($query->execute()->fetchCol() as $eid) {
+      $arguments[$eid] = array(
+        'argument1' => NULL,
+        'argument2' => NULL,
+      );
+    }
+    return array('total' => $total, 'arguments' => $arguments);
   }
 }
 
@@ -795,6 +871,38 @@ class UserActivityActionHandler extends ActivityActionHandler {
       return parent::valid($eid, $actor, $timestamp, $objects, $argument1, $argument2) && !empty($intersect);
     }
     return parent::valid($eid, $actor, $timestamp, $objects, $argument1, $argument2);
+  }
+
+  /**
+   * List all eids for this handler, used for batch regeneration and backfilling.
+   *
+   * @param int $offset
+   *   The offset for the query.
+   * @param int $limit
+   *   The limit for the query.
+   */
+  public function listEids($offset, $limit) {
+    $roles = array_filter($this->options['roles']);
+
+    $query = db_select('users', 'u')
+      ->fields('u', array('uid'), 'eid')
+      ->range($offset, $limit);
+    if (!empty($roles)) {
+      $roles_alias = $query->join('users_roles', 'r', 'r.uid = u.uid');
+      $query->condition($roles_alias . '.rid', $roles, 'IN');
+    }
+
+    $count_query = clone $query;
+    $total = $count_query->countQuery()->execute()->fetchField();
+
+    $arguments = array();
+    foreach ($query->execute()->fetchCol() as $eid) {
+      $arguments[$eid] = array(
+        'argument1' => NULL,
+        'argument2' => NULL,
+      );
+    }
+    return array('total' => $total, 'arguments' => $arguments);
   }
 }
 

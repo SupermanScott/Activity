@@ -544,3 +544,107 @@ function activity_recreate_messages_step($action_id, &$context) {
     unset($context['sandbox']);
   }
 }
+
+/**
+ * Set a batch process to regenerate activity for a specific hook and op pair.
+ *
+ * @param $action
+ *  ActivityActionHandler to create messages for.
+ *
+ * @return none
+ */
+function activity_batch_regenerate(ActivityActionHandler $action) {
+  $batch = array(
+    'title' => t('Creating @label messages', array('@label' => $action->label)),
+    'operations' => array(
+      array('activity_batch_delete', array($action->actions_id)),
+      array('activity_batch_regenerate_step', array($action->actions_id))
+    ),
+    'file' => drupal_get_path('module', 'activity') . '/activity.admin.inc',
+  );
+  batch_set($batch);
+  batch_process('admin/structure/activity');
+}
+
+/**
+ * Batch deletion step.
+ *
+ * @param $aid
+ *  The actions.aid for this template.
+ * @param $batch_context
+ *  The context array for this batch operation.
+ */
+function activity_batch_delete($aid, &$batch_context) {
+  if (!isset($batch_context['sandbox']['last_activity_id'])) {
+    $batch_context['sandbox']['last_activity_id'] = 0;
+    $batch_context['sandbox']['progress'] = 0;
+    $batch_context['sandbox']['max'] = db_query("SELECT COUNT(aid) FROM {activity} WHERE actions_id = :aid", array(':aid' => $aid))->fetchField();
+  }
+  $limit = 200;
+  $activity_to_be_deleted = db_select('activity', 'a')
+    ->fields('a', array('aid'))
+    ->condition('a.aid', $batch_context['sandbox']['last_activity_id'], '>')
+    ->condition('a.actions_id', $aid)
+    ->orderBy('a.aid', 'ASC')
+    ->range(0, $limit)
+    ->execute()
+    ->fetchAll();
+  $activity_ids = array();
+  if (!empty($activity_to_be_deleted)) {
+    foreach ($activity_to_be_deleted as $row) {
+      $activity_ids[] = $row->aid;
+      $batch_context['sandbox']['last_activity_id'] = $row->aid;
+      $batch_context['sandbox']['progress']++;
+    }
+    activity_delete($activity_ids);
+  }
+
+  // Check if not finished.
+  if (!empty($activity_to_be_deleted) && $batch_context['sandbox']['progress'] < $batch_context['sandbox']['max']) {
+    $batch_context['finished'] = $batch_context['sandbox']['progress'] / $batch_context['sandbox']['max'];
+  }
+  else {
+    // If finished, delete the sandbox.
+    unset($batch_context['sandbox']);
+  }
+  
+}
+
+/**
+ * Batch regeneration step.
+ *
+ * @param $aid
+ *  The actions.aid for this template.
+ * @param $batch_context
+ *  An array representing the context for the batch operation.
+ */
+function activity_batch_regenerate_step($aid, &$batch_context) {
+  $handler = activity_handler_batchable_load($aid);
+  if (empty($handler)) {
+    // Return error? Done?
+  }
+  $limit = 50;
+
+  // Set up the sandbox for the regeneration.
+  if (!isset($batch_context['sandbox']['list'])) {
+    $batch_context['sandbox']['progress'] = 0;
+    $batch_context['sandbox']['last_eid'] = 0;
+  }
+  // Extracts $arguments and $total.
+  extract($handler->listEids($batch_context['sandbox']['progress'], $limit));
+
+  foreach ($arguments as $eid => $arguments) {
+    // Ensure they are there.
+    $arguments += array('argument1' => NULL, 'argument2' => NULL);
+    activity_save_activity($handler, $eid, $arguments['argument1'], $arguments['argument2']);
+    $batch_context['sandbox']['progress']++;
+  }
+  // Check if not finished.
+  if ($batch_context['sandbox']['progress'] < $total) {
+    $batch_context['finished'] = $batch_context['sandbox']['progress'] / $batch_context['sandbox']['max'];
+  }
+  else {
+    // If finished, delete the sandbox.
+    unset($batch_context['sandbox']);
+  }
+}

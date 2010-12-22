@@ -98,6 +98,15 @@ function activity_menu() {
     'file' => 'activity.admin.inc',
     'type' => MENU_CALLBACK,
   );
+  $items['admin/structure/activity/regenerate/%activity_handler_batchable/%'] = array(
+    'title' => 'Create new Messages',
+    'description' => 'Delete messages for the provided action and create new ones',
+    'page callback' => 'activity_batch_regenerate',
+    'page arguments' => array(4),
+    'access callback' => 'activity_batch_access',
+    'access arguments' => array(4, 5),
+    'file' => 'activity.admin.inc',
+  ); 
   return $items;
 }
 
@@ -157,63 +166,80 @@ function activity_record($object, $context, $a1, $a2) {
     $handler = activity_handler_load($context['aid']);
     $eid = $handler->determineEid($context);
     if (isset($eid)) {
-      $objects = $handler->loadObjects($eid);
-      drupal_alter('activity_objects', $objects, $handler->type);
-      $uid = $handler->determineActor($objects);
-      $timestamp = $handler->determineTimestamp($objects);
+      activity_save_activity($handler, $eid, $a1, $a2);
+    }
+  }
+}
 
-      if ($handler->valid($eid, $uid, $timestamp, $objects, $a1, $a2)) {
-        $messages = $handler->tokenize($objects);
-        $nid = $handler->determineNid($objects);
+/**
+ * Write all required db records for a new activity.
+ *
+ * @param ActivityActionHandler $handler
+ *   The handler for this action.
+ * @param int $eid
+ *   The entity id for this action.
+ * @param mixed $a1
+ *   The first argument passed to the action handler.
+ * @param mixed $a2
+ *   The second argument passed to the action handler.
+ */
+function activity_save_activity(ActivityActionHandler $handler, $eid, $a1, $a2) {
+  $objects = $handler->loadObjects($eid);
+  drupal_alter('activity_objects', $objects, $handler->type);
+  $uid = $handler->determineActor($objects);
+  $timestamp = $handler->determineTimestamp($objects);
 
-        $argument1 = NULL;
-        $argument2 = NULL;
-        if (isset($a1)) {
-          $argument1 = serialize($a1);
-        }
-        if (isset($a2)) {
-          $argument2 = serialize($a2);
-        }
+  if ($handler->valid($eid, $uid, $timestamp, $objects, $a1, $a2)) {
+    $messages = $handler->tokenize($objects);
+    $nid = $handler->determineNid($objects);
 
-        // Recording one Activity is a number of different database inserts and
-        // this makes all the database inserts into one transaction.
-        $txn = db_transaction();
+    $argument1 = NULL;
+    $argument2 = NULL;
+    if (isset($a1)) {
+      $argument1 = serialize($a1);
+    }
+    if (isset($a2)) {
+      $argument2 = serialize($a2);
+    }
 
-        // Write to {activity} table.
-        $record = array(
-          'uid' => $uid,
-          'type' => $handler->type,
-          'nid' => $nid,
-          'eid' => $eid,
-          'created' => $timestamp,
-          'actions_id' => $context['aid'],
-          'argument1' => $argument1,
-          'argument2' => $argument2,
-          'status' => $handler->isPublished($objects, $uid) ? 1 : 0,
+    // Recording one Activity is a number of different database inserts and
+    // this makes all the database inserts into one transaction.
+    $txn = db_transaction();
+
+    // Write to {activity} table.
+    $record = array(
+      'uid' => $uid,
+      'type' => $handler->type,
+      'nid' => $nid,
+      'eid' => $eid,
+      'created' => $timestamp,
+      'actions_id' => $handler->actions_id,
+      'argument1' => $argument1,
+      'argument2' => $argument2,
+      'status' => $handler->isPublished($objects, $uid) ? 1 : 0,
+    );
+    $record = (object) $record;
+    drupal_alter('activity_record', $record);
+    drupal_write_record('activity', $record);
+
+    drupal_alter('activity_messages', $messages, $handler->name, $objects);
+
+    // Write messages to {activity_messages} table.
+    activity_write_messages($messages, $record->aid);
+
+    foreach (activity_get_grants($record) as $realm => $values) {
+      foreach ($values as $value) {
+        $row = array(
+          'aid' => $record->aid,
+          'realm' => $realm,
+          'value' => $value,
         );
-        $record = (object) $record;
-        drupal_alter('activity_record', $record, $context);
-        drupal_write_record('activity', $record);
-
-        drupal_alter('activity_messages', $messages, $handler->name, $objects);
-
-        // Write messages to {activity_messages} table.
-        activity_write_messages($messages, $record->aid);
-
-        foreach (activity_get_grants($record) as $realm => $values) {
-          foreach ($values as $value) {
-            $row = array(
-              'aid' => $record->aid,
-              'realm' => $realm,
-              'value' => $value,
-            );
-            drupal_write_record('activity_access', $row);
-          }
-        }
+        drupal_write_record('activity_access', $row);
       }
     }
   }
 }
+
 
 /**
  * Creates new messages for a set of activity records.
@@ -658,6 +684,7 @@ function theme_activity_settings_actions_list($vars) {
 
     if ($handler->batch) {
       $operations[] = l(t('update messages'), 'admin/structure/activity/recreate/' . $result['aid'] . '/' . drupal_get_token($result['aid']));
+      $operations[] = l(t('regenerate messages'), 'admin/structure/activity/regenerate/' . $result['aid'] . '/' . drupal_get_token($result['aid']));
     }
 
     $rows[] = array(
