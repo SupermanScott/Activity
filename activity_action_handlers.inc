@@ -886,6 +886,7 @@ class UserActivityActionHandler extends ActivityActionHandler {
 
     $query = db_select('users', 'u')
       ->fields('u', array('uid'), 'eid')
+      ->condition('u.uid', 0, '<>')
       ->range($offset, $limit);
     if (!empty($roles)) {
       $roles_alias = $query->join('users_roles', 'r', 'r.uid = u.uid');
