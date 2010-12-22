@@ -335,7 +335,7 @@ function activity_actions_delete_form_submit($form, &$form_state) {
 /**
  * Form builder to dispaly settings for activity module
  */
-function activity_settings_form(&$form_state = NULL) {
+function activity_settings_form($form, &$form_state = NULL) {
   $form['activity_expiration'] = array(
     '#type' => 'fieldset',
     '#title' => t('Activity Expiration Settings'),
