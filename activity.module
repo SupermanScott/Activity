@@ -219,7 +219,7 @@ function activity_save_activity(ActivityActionHandler $handler, $eid, $a1, $a2) 
       'status' => $handler->isPublished($objects, $uid) ? 1 : 0,
     );
     $record = (object) $record;
-    drupal_alter('activity_record', $record);
+    drupal_alter('activity_record', $record, $handler);
     drupal_write_record('activity', $record);
 
     drupal_alter('activity_messages', $messages, $handler->name, $objects);
