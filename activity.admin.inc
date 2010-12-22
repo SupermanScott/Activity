@@ -277,8 +277,14 @@ function activity_actions_delete_form($form, &$form_state, $action) {
     '#type' => 'value',
     '#value' => $action->aid,
   );
+  $form['delete'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Delete all activities'),
+    '#description' => t('Delete all activities associated with this template'),
+    '#default_value' => TRUE,
+  );
   return confirm_form($form,
-    t('Are you sure you want to delete the action %action?', array('%action' => $action->description)),
+    t('Are you sure you want to delete the action %action?', array('%action' => $action->label)),
     'admin/structure/activity',
     t('This cannot be undone.'),
     t('Delete'), t('Cancel')
@@ -295,9 +301,19 @@ function activity_actions_delete_form_submit($form, &$form_state) {
   $action = actions_load($aid);
   actions_delete($aid);
 
+  if ($form_state['values']['delete']) {
+    $batch = array(
+      'title' => t('Deleting activities'),
+      'operations' => array(
+        array('activity_batch_delete', array($aid))
+      ),
+      'file' => drupal_get_path('module', 'activity') . '/activity.admin.inc',
+    );
+    batch_set($batch);
+  }
 
-  watchdog('user', 'Deleted action %aid (%action)', array('%aid' => $aid, '%action' => $action->label));
-  drupal_set_message(t('Action %action was deleted', array('%action' => $$action->label)));
+  watchdog('activity', 'Deleted action %aid (%action)', array('%aid' => $aid, '%action' => $action->label));
+  drupal_set_message(t('Action %action was deleted', array('%action' => $action->label)));
   $form_state['redirect'] = 'admin/structure/activity';
 }
 
