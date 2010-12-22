@@ -111,6 +111,43 @@ function activity_menu() {
 }
 
 /**
+ * Implements hook_permission().
+ */
+function activity_permission() {
+  return array(
+    'administer activity' => array(
+      'title' => t('Administer Activity'), 
+      'description' => t('Perform administration tasks for Activity.'),
+    ),
+    'delete own activity' => array(
+      'title' => t('Delete own Activity'),
+      'description' => t('Delete their own Activity from the site.'),
+    ),
+  );
+}
+
+/**
+ * Menu Access callback for delete Activity.
+ *
+ * @param int $aid
+ *  The activity id for the activity
+ *
+ * @return boolean
+ *  Whether or not the currently logged in user can delete
+ *  the specified Activity.
+ */
+function activity_delete_access($aid) {
+  if (user_access('administer activity')) {
+    return TRUE;
+  }
+  if (user_access('delete own activity')) {
+    $uid = db_query("SELECT uid FROM {activity} WHERE aid = :aid", array(':aid' => $aid))->fetchField();
+    return $uid == $GLOBALS['user']->uid;
+  }
+  return FALSE;
+}
+
+/**
  * Load an Activity Handler from an aid.
  *
  * @param $aid
