@@ -171,11 +171,15 @@ abstract class ActivityActionHandler {
         '#title' => t('@name messages', array('@name' => $language->name)),
       );
       foreach ($messages as $object_key => $information) {
+        $current_message = '';
+        if (isset($this->templates[$id]) && isset($this->templates[$id][$object_key])) {
+          $current_message = $this->templates[$id][$object_key];
+        }
         $form[$id][$object_key] = array(
           '#type' => 'textarea',
           '#title' => t($information['title']),
           '#description' => t($information['description']),
-          '#default_value' => $this->templates[$id][$object_key],
+          '#default_value' => $current_message,
         );
       }
     }
