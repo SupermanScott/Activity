@@ -1,11 +1,10 @@
 <?php
 // $Id: $
-// @todo: come up with a way to have this really inherit from DrupalUnitTestCase
-class ActivityUnitTest extends DrupalWebTestCase {
+class ActivityWebTest extends DrupalWebTestCase {
   public static function getInfo() {
     return array(
-      'name' => t('Activity Core Unit tests'),
-      'description' => t('Unit tests for the Activity module'),
+      'name' => t('Activity Core Web tests'),
+      'description' => t('Web tests for the Activity module that require database access.'),
       'group' => t('Activity'),
     );
   }
@@ -14,7 +13,10 @@ class ActivityUnitTest extends DrupalWebTestCase {
     parent::setUp('activity');
   }
 
-  public function testNodeActivityInsert() {
+  /**
+   * Test that the node activity handler properly loads the node objects.
+   */
+  public function testNodeActivityLoadObjects() {
     $handler = activity_load_handler('node_insert');
     $handler->templates = array(
       'en' => array(
@@ -31,6 +33,63 @@ class ActivityUnitTest extends DrupalWebTestCase {
     $node2 = $this->drupalCreateNode(array('type' => 'page', 'status' => 0));
     $objects1 = $handler->loadObjects($node1->nid);
     $objects2 = $handler->loadObjects($node2->nid);
+
+    // Make sure loaded objects match what is expected.
+    $this->assertEqual($node1->nid, $objects1['node']->nid, t('Loaded up the correct article node'));
+    $this->assertEqual($node2->nid, $objects2['node']->nid, t('Loaded up the correct page node'));
+  }
+}
+
+class ActivityUnitTest extends DrupalUnitTestCase {
+  public static function getInfo() {
+    return array(
+      'name' => t('Activity Core Unit tests'),
+      'description' => t('Unit tests for the Activity module'),
+      'group' => t('Activity'),
+    );
+  }
+
+  public function setUp() {
+    parent::setUp('activity');
+    require_once './' . drupal_get_path('module', 'activity') . '/activity_action_handlers.inc';
+  }
+
+  public function testNodeActivityInsert() {
+    $handler = activity_load_handler('node_insert');
+    $handler->templates = array(
+      'en' => array(
+        'node' => 'Node Author Message',
+        'public' => 'Public Message',
+      ),
+    );
+
+    $handler->options = array('types' => array(), 'view_modes' => array());
+    $handler->actions_id = -1;
+    $handler->label = 'Test node insert';
+
+    $node1 = (object) array(
+      'nid' => 1,
+      'vid' => 1,
+      'uid' => 0, // Avoids the window check, which queries the users table.
+      'type' => 'article',
+      'language' => 'und',
+      'title' => 'Test1',
+      'created' => REQUEST_TIME,
+      'status' => 1,
+    );
+    $node2 =(object) array(
+      'nid' => 2,
+      'vid' => 2,
+      'uid' => 0,
+      'type' => 'page',
+      'language' => 'und',
+      'title' => 'Test2',
+      'created' => REQUEST_TIME,
+      'status' => 0,
+    );
+
+    $objects1 = array('node' => $node1);
+    $objects2 = array('node' => $node2);
 
     // Make sure loaded objects match what is expected.
     $this->assertEqual($node1->nid, $objects1['node']->nid, t('Loaded up the correct article node'));
@@ -60,5 +119,121 @@ class ActivityUnitTest extends DrupalWebTestCase {
     // Check published flag.
     $this->assertTrue($handler->isPublished($objects1, $node1->uid), t('Correctly flagged activity as published'));
     $this->assertTrue(!$handler->isPublished($objects2, $node2->uid), t('Correctly flagged activity as not published'));
+  }
+
+  public function testCommentActivityInsert() {
+    $handler = activity_load_handler('comment_insert');
+    $handler->templates = array(
+      'en' => array(
+        'comment' => 'Comment Author Message',
+        'node_comment' => 'Node and Comment Message',
+        'node' => 'Node Author Message',
+        'public' => 'Public Message',
+      ),
+    );
+
+    $handler->options = array('types' => array(), 'view_modes' => array());
+    $handler->actions_id = -1;
+    $handler->label = 'Test comment insert';
+
+    $node1 = (object) array(
+      'nid' => 1,
+      'vid' => 1,
+      'uid' => 0, // Avoids the window check, which queries the users table.
+      'type' => 'article',
+      'language' => 'und',
+      'title' => 'Test1',
+      'created' => REQUEST_TIME,
+      'status' => 1,
+    );
+    $node2 =(object) array(
+      'nid' => 2,
+      'vid' => 2,
+      'uid' => 0,
+      'type' => 'page',
+      'language' => 'und',
+      'title' => 'Test2',
+      'created' => REQUEST_TIME,
+      'status' => 0,
+    );
+
+    $comment1 = (object) array(
+      'cid' => 1,
+      'uid' => 0,
+      'created' => REQUEST_TIME,
+      'status' => 1,
+    );
+    $comment2 = (object) array(
+      'cid' => 1,
+      'uid' => 0,
+      'created' => REQUEST_TIME,
+      'status' => 0,
+    );
+
+    $objects1 = array('node' => $node1, 'comment' => $comment1);
+    $objects2 = array('node' => $node2, 'comment' => $comment2);
+
+    // Ensure the proper eid is returned.
+    $this->assertEqual($comment1->cid, $handler->determineEid($objects1), t('Proper Eid is returned'));
+
+    // Ensure the proper actor is returned.
+    $this->assertEqual($comment1->uid, $handler->determineActor($objects1), t('Proper Actor id is returned'));
+
+    // Check timestamp.
+    $this->assertEqual($comment1->created, $handler->determineTimestamp($objects2), t('Returned proper timestamp'));
+
+    // Check published flag.
+    $this->assertTrue($handler->isPublished($objects1, $comment1->uid), t('Correctly flagged comment activity as published'));
+    $this->assertTrue(!$handler->isPublished($objects2, $comment2->uid), t('Correctly flagged comment activity as not published'));
+  }
+
+  public function testUserActivityInsert() {
+    $handler = activity_load_handler('user_insert');
+    $handler->templates = array(
+      'en' => array(
+        'user' => 'Registered User',
+        'public' => 'Public Message',
+      ),
+    );
+
+    $handler->options = array('roles' => array());
+    $handler->actions_id = -1;
+    $handler->label = 'Test user insert';
+
+    $objects1['user'] = (object) array(
+      'uid' => 7,
+      'status' => 1,
+      'created' => REQUEST_TIME - 68,
+      'roles' => array(
+        1 => 'admin',
+      ),
+    );
+
+    $objects2['user'] = (object) array(
+      'uid' => 45,
+      'status' => 0,
+      'created' => REQUEST_TIME - 678,
+      'roles' => array(
+        2 => 'other_role',
+      ),
+    );
+
+    // Ensure the proper eid is returned.
+    $this->assertEqual($objects1['user']->uid, $handler->determineEid(array('account' => $objects1['user'])), t('Proper Eid is returned'));
+
+    // Ensure the proper actor is returned.
+    $this->assertEqual($objects1['user']->uid, $handler->determineActor($objects1), t('Proper Actor id is returned'));
+
+    // Check timestamp.
+    $this->assertEqual($objects1['user']->created, $handler->determineTimestamp($objects1), t('Returned proper timestamp'));
+
+    // Check published flag.
+    $this->assertTrue($handler->isPublished($objects1, $objects1['user']->uid), t('Correctly flagged user insert activity as published'));
+    $this->assertTrue(!$handler->isPublished($objects2, $objects2['user']->uid), t('Correctly flagged user insert activity as unpublished.'));
+
+    // Check Role validation
+    $handler->options = array('roles' => array(1));
+    $this->assertTrue($handler->valid($objects1['user']->uid, $objects1['user']->uid, REQUEST_TIME, $objects1, NULL, NULL), t('Correctly marked a user registeration with role 1 as valid'));
+    $this->assertTrue(!$handler->valid($objects2['user']->uid, $objects2['user']->uid, REQUEST_TIME, $objects2, NULL, NULL), t('Correctly marked a user registeration without role 1 as invalid'));
   }
 }

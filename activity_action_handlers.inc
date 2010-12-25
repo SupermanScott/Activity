@@ -813,7 +813,11 @@ class UserActivityActionHandler extends ActivityActionHandler {
    *   The actor for this activity.
    */
   public function isPublished($objects, $actor) {
-    return parent::isPublished($objects) && $objects['user']->status == 1;
+    $user_active = $objects['user']->status == 1;
+    if ($this->type != 'user_insert') {
+      return $user_active && parent::isPublished($objects, $actor);
+    }
+    return $user_active;
   }
 
   /**
