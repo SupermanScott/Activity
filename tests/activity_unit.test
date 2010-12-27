@@ -10,7 +10,80 @@ class ActivityWebTest extends DrupalWebTestCase {
   }
 
   public function setUp() {
-    parent::setUp('activity');
+    parent::setUp('activity', 'comment');
+  }
+
+ /**
+   * Post comment.
+   *
+   * @param $node
+   *   Node to post comment on.
+   * @param $comment
+   *   Comment body.
+   * @param $subject
+   *   Comment subject.
+   * @param $contact
+   *   Set to NULL for no contact info, TRUE to ignore success checking, and
+   *   array of values to set contact info.
+   */
+  function postComment($node, $comment, $subject = '', $contact = NULL) {
+    $langcode = LANGUAGE_NONE;
+    $edit = array();
+    $edit['comment_body[' . $langcode . '][0][value]'] = $comment;
+
+    $preview_mode = variable_get('comment_preview_article', DRUPAL_OPTIONAL);
+    $subject_mode = variable_get('comment_subject_field_article', 1);
+
+    // Must get the page before we test for fields.
+    if ($node !== NULL) {
+      $this->drupalGet('comment/reply/' . $node->nid);
+    }
+
+    if ($subject_mode == TRUE) {
+      $edit['subject'] = $subject;
+    }
+    else {
+      $this->assertNoFieldByName('subject', '', t('Subject field not found.'));
+    }
+
+    if ($contact !== NULL && is_array($contact)) {
+      $edit += $contact;
+    }
+    switch ($preview_mode) {
+      case DRUPAL_REQUIRED:
+        // Preview required so no save button should be found.
+        $this->assertNoFieldByName('op', t('Save'), t('Save button not found.'));
+        $this->drupalPost(NULL, $edit, t('Preview'));
+        // Don't break here so that we can test post-preview field presence and
+        // function below.
+      case DRUPAL_OPTIONAL:
+        $this->assertFieldByName('op', t('Preview'), t('Preview button found.'));
+        $this->assertFieldByName('op', t('Save'), t('Save button found.'));
+        $this->drupalPost(NULL, $edit, t('Save'));
+        break;
+
+      case DRUPAL_DISABLED:
+        $this->assertNoFieldByName('op', t('Preview'), t('Preview button not found.'));
+        $this->assertFieldByName('op', t('Save'), t('Save button found.'));
+        $this->drupalPost(NULL, $edit, t('Save'));
+        break;
+    }
+    $match = array();
+    // Get comment ID
+    preg_match('/#comment-([0-9]+)/', $this->getURL(), $match);
+
+    // Get comment.
+    if ($contact !== TRUE) { // If true then attempting to find error message.
+      if ($subject) {
+        $this->assertText($subject, 'Comment subject posted.');
+      }
+      $this->assertText($comment, 'Comment body posted.');
+      $this->assertTrue((!empty($match) && !empty($match[1])), t('Comment id found.'));
+    }
+
+    if (isset($match[1])) {
+      return $match[1];
+    }
   }
 
   /**
@@ -18,16 +91,10 @@ class ActivityWebTest extends DrupalWebTestCase {
    */
   public function testNodeActivityLoadObjects() {
     $handler = activity_load_handler('node_insert');
-    $handler->templates = array(
-      'en' => array(
-        'node' => 'Node Author Message',
-        'public' => 'Public Message',
-      ),
-    );
 
     $handler->options = array('types' => array(), 'view_modes' => array());
     $handler->actions_id = -1;
-    $handler->label = 'Test node insert';
+    $handler->label = 'Test node update';
 
     $node1 = $this->drupalCreateNode(array('type' => 'article'));
     $node2 = $this->drupalCreateNode(array('type' => 'page', 'status' => 0));
@@ -37,6 +104,39 @@ class ActivityWebTest extends DrupalWebTestCase {
     // Make sure loaded objects match what is expected.
     $this->assertEqual($node1->nid, $objects1['node']->nid, t('Loaded up the correct article node'));
     $this->assertEqual($node2->nid, $objects2['node']->nid, t('Loaded up the correct page node'));
+  }
+
+  public function testCommentActivityLoadObjects() {
+    $handler = activity_load_handler('comment_insert');
+    $current_user = $this->drupalCreateUser();
+    $this->drupalLogin($current_user);
+
+    $handler->options = array('types' => array(), 'view_modes' => array());
+    $handler->actions_id = -1;
+    $handler->label = 'Test comment insert';
+
+    $node1 = $this->drupalCreateNode(array('type' => 'article'));
+    $cid = $this->postComment($node1, 'test comment');
+
+    $objects1 = $handler->loadObjects($cid);
+
+    // Make sure loaded objects match what is expected.
+    $this->assertEqual($cid, $objects1['comment']->cid, t('Loaded up the correct comment'));
+    $this->assertEqual($node1->nid, $objects1['node']->nid, t('Loaded up correct node'));
+  }
+
+  /**
+   * Test that the node activity handler properly loads the user objects.
+   */
+  public function testUserActivityLoadObjects() {
+    $handler = activity_load_handler('user_insert');
+    $handler->label = 'Test user update';
+    $account = $this->drupalCreateUser();
+
+    $objects1 = $handler->loadObjects($account->uid);
+
+    // Make sure loaded objects match what is expected.
+    $this->assertEqual($account->uid, $objects1['user']->uid, t('Loaded up the correct user account'));
   }
 }
 
@@ -119,6 +219,8 @@ class ActivityUnitTest extends DrupalUnitTestCase {
     // Check published flag.
     $this->assertTrue($handler->isPublished($objects1, $node1->uid), t('Correctly flagged activity as published'));
     $this->assertTrue(!$handler->isPublished($objects2, $node2->uid), t('Correctly flagged activity as not published'));
+
+    $this->assertEqual($handler->determineNid($objects1), $objects1['node']->nid, t('Returned proper nid'));
   }
 
   public function testCommentActivityInsert() {
@@ -185,6 +287,8 @@ class ActivityUnitTest extends DrupalUnitTestCase {
     // Check published flag.
     $this->assertTrue($handler->isPublished($objects1, $comment1->uid), t('Correctly flagged comment activity as published'));
     $this->assertTrue(!$handler->isPublished($objects2, $comment2->uid), t('Correctly flagged comment activity as not published'));
+
+    $this->assertEqual($handler->determineNid($objects1), $objects1['node']->nid, t('Returned proper nid'));
   }
 
   public function testUserActivityInsert() {
@@ -235,5 +339,7 @@ class ActivityUnitTest extends DrupalUnitTestCase {
     $handler->options = array('roles' => array(1));
     $this->assertTrue($handler->valid($objects1['user']->uid, $objects1['user']->uid, REQUEST_TIME, $objects1, NULL, NULL), t('Correctly marked a user registeration with role 1 as valid'));
     $this->assertTrue(!$handler->valid($objects2['user']->uid, $objects2['user']->uid, REQUEST_TIME, $objects2, NULL, NULL), t('Correctly marked a user registeration without role 1 as invalid'));
+
+    $this->assertEqual($handler->determineNid($objects1), NULL, t('Returned proper a NULL nid'));
   }
 }
