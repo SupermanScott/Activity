@@ -228,8 +228,8 @@ class ActivityUnitTest extends DrupalUnitTestCase {
     $handler->templates = array(
       'en' => array(
         'comment' => 'Comment Author Message',
-        'node_comment' => 'Node and Comment Message',
         'node' => 'Node Author Message',
+        'node_comment' => 'Node and Comment Message',
         'public' => 'Public Message',
       ),
     );
@@ -289,6 +289,21 @@ class ActivityUnitTest extends DrupalUnitTestCase {
     $this->assertTrue(!$handler->isPublished($objects2, $comment2->uid), t('Correctly flagged comment activity as not published'));
 
     $this->assertEqual($handler->determineNid($objects1), $objects1['node']->nid, t('Returned proper nid'));
+
+    // Test to make sure getUid functions properly.
+    $objects1['node']->uid = 2;
+    $objects1['comment']->uid = 3;
+    $messages = $handler->tokenize($objects1);
+    $this->assertTrue(isset($messages['en']), t('English Messages are returned'));
+    $this->assertEqual($messages['en'][$objects1['comment']->uid], $handler->templates['en']['comment'], t('Comment author message is properly returned'));
+    $this->assertEqual($messages['en'][$objects1['node']->uid], $handler->templates['en']['node'], t('Node author message is properly returned'));
+    $this->assertEqual($messages['en'][$objects1['comment']->uid], $handler->templates['en']['comment'], t('Comment author message is properly returned'));
+
+    // Check that the comment author == node author case.
+    $objects1['comment']->uid = $objects1['node']->uid;
+    $messages = $handler->tokenize($objects1);
+    $this->assertEqual($messages['en'][$objects1['node']->uid], $handler->templates['en']['node_comment'], t('Comment and Node author message is properly handled'));
+    
   }
 
   public function testUserActivityInsert() {
