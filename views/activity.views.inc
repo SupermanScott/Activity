@@ -59,7 +59,7 @@ function activity_views_data() {
     'title' => t('Type'),
     'help' => t('The type of object being acted upon (node, user, etc.)'),
     'field' => array(
-      'handler' => 'views_handler_field',
+      'handler' => 'activity_views_handler_field_type',
     ),
     'filter' => array(
       'handler' => 'views_handler_filter_in_operator',
@@ -245,6 +245,7 @@ function activity_views_handlers() {
     // Field Handlers.
     'activity_views_handler_field_message',
     'activity_views_handler_field_activity_link_delete',
+    'activity_views_handler_field_type',
 
     // Filter handlers.
     'activity_views_handler_filter_access',

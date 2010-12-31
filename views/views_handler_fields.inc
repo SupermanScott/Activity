@@ -63,3 +63,18 @@ class activity_handler_field_activity_link_delete extends views_handler_field {
     }
   }
 }
+
+/**
+ * Class to display the admin name for the hook.
+ */
+class activity_views_handler_field_type extends views_handler_field {
+  function render($values) {
+    $hooks = activity_cache_get('hooks');
+    if (isset($hooks[$values->{$this->field_alias}])) {
+      return t($hooks[$values->{$this->field_alias}]['name']);
+    }
+    else {
+      return parent::render($values);
+    }
+  }
+}
