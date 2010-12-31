@@ -36,7 +36,7 @@ class activity_views_handler_field_message extends views_handler_field {
  *
  * @ingroup views_field_handlers
  */
-class activity_handler_field_activity_link_delete extends views_handler_field {
+class activity_views_handler_field_activity_link_delete extends views_handler_field {
   function option_definition() {
     $options = parent::option_definition();
     $options['text'] = array('default' => '', 'translatable' => TRUE);

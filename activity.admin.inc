@@ -408,7 +408,7 @@ function activity_expire_validate($element, &$form_state) {
 /**
  * Menu callback -- ask for confirmation of activity deletion
  */
-function activity_delete_confirm(&$form_state, $aid) {
+function activity_delete_confirm($form, $form_state, $aid) {
   $form['aid'] = array(
     '#type' => 'value',
     '#value' => $aid,
@@ -428,7 +428,7 @@ function activity_delete_confirm(&$form_state, $aid) {
  */
 function activity_delete_confirm_submit($form, &$form_state) {
   if ($form_state['values']['confirm']) {
-    activity_delete($form_state['values']['aid']);
+    activity_delete(array($form_state['values']['aid']));
   }
 
   $form_state['redirect'] = '<front>';

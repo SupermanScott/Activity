@@ -40,7 +40,7 @@ function activity_views_data() {
   );
   $data['activity']['type'] = array(
     'title' => t('Type'),
-    'help' => t('The type of object being acted upon (node, user, etc.)'),
+    'help' => t('The hook that generated the Activity'),
     'field' => array(
       'handler' => 'activity_views_handler_field_type',
     ),
