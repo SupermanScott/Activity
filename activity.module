@@ -19,16 +19,6 @@ function activity_menu() {
     'file' => 'activity.admin.inc',
     'type' => MENU_CALLBACK,
   );
-  $items['user/%user/activity/settings'] = array(
-    'title' => 'Activity privacy settings',
-    'description' => 'Modify your feed settings',
-    'page callback' => 'drupal_get_form',
-    'page arguments' => array('activity_user_settings', 1),
-    'access arguments' => array(1),
-    'access callback' => 'activity_account_settings_access',
-    'file' => 'activity.admin.inc',
-    'type' => MENU_LOCAL_TASK,
-  );
   $items['admin/activity/weight'] = array(
     'title' => 'Fix Trigger weight',
     'page callback' => 'activity_fix_trigger_weight',

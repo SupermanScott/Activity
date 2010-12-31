@@ -7,59 +7,6 @@
  */
 
 /**
- * Menu callback. Provides checkboxes for a user's activity feed.
- */
-function activity_user_settings(&$form_state, $account) {
-  if (!isset($account->activity_ignore)) {
-    $account->activity_ignore = array();
-  }
-  $form['actions'] = array(
-    '#type' => 'fieldset',
-    '#title' => t('Actions within !site', array('!site' => variable_get('site_name', 'drupal'))),
-    '#description' => t('By default, all of the following actions you perform can be viewed on this site. <br />Select the activities you would like to <strong>exclude</strong> people from seeing.'),
-  );
-  $form['actions']['activity_ignore']['#tree'] = TRUE;
-
-  // In order to see what actions are being implemented on a given system we
-  // need to query the actions table joining the trigger_assignments.
-  $query = "SELECT a.aid, a.description, ta.hook, ta.op FROM {actions} a
-            INNER JOIN {trigger_assignments} ta ON ta.aid = a.aid
-            WHERE a.type = 'activity'";
-  $result = db_query($query);
-  while ($row = db_fetch_object($result)) {
-    $module = activity_module_name($row->hook);
-
-    // The module might be uninstalled and therefore, not exist anymore.
-    if (!empty($module)) {
-      $description = $row->description;
-      // This means we're basically keying off of the aid and not the triggers. We
-      // could possible key off of the triggers instead, and give the user more
-      // fine grained control over (i.e. I want to record my own node inserts but
-      // not my node updates).
-      $form['actions']['activity_ignore'][$row->aid] = array(
-        '#type' => 'radios',
-        '#title' => $description,
-        '#options' => array(1 => t('Record an activity message'), 0 => t('Do not record')),
-        '#default_value' => isset($account->activity_ignore[$row->aid]) ? $account->activity_ignore[$row->aid] : 1,
-      );
-    }
-  }
-  $form['submit'] = array(
-    '#type' => 'submit',
-     '#value' => t('Save'),
-   );
-  $form['#account'] = $account;
-   return $form;
-}
-
-/**
- * User settings form submit handler.
- */
-function activity_user_settings_submit($form, &$form_state) {
-  user_save($form['#account'], array('activity_ignore' => $form_state['values']['activity_ignore']));
-}
-
-/**
  * Menu callback to display all the currently setup Activities.
  */
 function activity_admin_overview() {
