@@ -38,23 +38,6 @@ function activity_views_data() {
       'handler' => 'views_handler_sort',
     ),
   );
-  // Views doesn't allow for a field of op. It is used elsewhere by Views
-  $data['activity']['operation'] = array(
-    'title' => t('Operation'),
-    'help' => t('The operation being performed (update, insert, etc.)'),
-    'field' => array(
-      'handler' => 'views_handler_field',
-      'field' => 'op',
-    ),
-    'filter' => array(
-      'handler' => 'activity_views_handler_filter_operations',
-      'field' => 'op',
-    ),
-    'argument' => array(
-      'handler' => 'views_handler_argument_string',
-      'field' => 'op',
-    ),
-  );
   $data['activity']['type'] = array(
     'title' => t('Type'),
     'help' => t('The type of object being acted upon (node, user, etc.)'),
@@ -279,7 +262,6 @@ function activity_views_handlers() {
     // Filter handlers.
     'activity_views_handler_filter_access',
     'activity_views_handler_filter_uid_access',
-    'activity_views_handler_filter_operations',
     'activity_views_handler_filter_actions_id',
 
     // Argument Handlers.
