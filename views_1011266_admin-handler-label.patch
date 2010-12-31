@@ -1,0 +1,18 @@
+? admin-handler-label.patch
+Index: includes/admin.inc
+===================================================================
+RCS file: /cvs/drupal-contrib/contributions/modules/views/includes/admin.inc,v
+retrieving revision 1.161.4.78
+diff -u -p -r1.161.4.78 admin.inc
+--- includes/admin.inc	30 Dec 2010 18:48:28 -0000	1.161.4.78
++++ includes/admin.inc	31 Dec 2010 05:26:22 -0000
+@@ -1393,7 +1393,8 @@ function template_preprocess_views_ui_ed
+     // @todo: get_handlers()
+     $handlers = $display->handler->get_option('relationships');
+     if ($handlers) {
+-      foreach ($handlers as $id => $handler) {
++      foreach ($handlers as $id => $info) {
++        $handler = $display->handler->get_handler('relationship', $id);
+         $relationships[$id] = $handler->label();
+       }
+     }
