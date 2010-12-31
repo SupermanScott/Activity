@@ -107,6 +107,27 @@ function activity_views_data() {
       'field' => 'aid',
     ),
   );
+
+  // Create a fake table that tells Views how to join to the actions table for
+  // the label.
+  $data['activity_actions']['table'] = array(
+    'group' => t('Activity'),
+    'join' => array(
+      'activity' => array(
+        'type' => 'INNER',
+        'field' => 'aid',
+        'left_field' => 'actions_id',
+        'table' => 'actions',
+      ),
+    ),
+  );
+  $data['activity_actions']['label'] = array(
+    'title' => t('Activity Label'),
+    'help' => t('Label assigned by the admin to this template'),
+    'field' => array(
+      'handler' => 'views_handler_field',
+    ),
+  );
   
   // Sets the context accound for all access filters going forward
   $data['activity_access']['context_user'] = array(
