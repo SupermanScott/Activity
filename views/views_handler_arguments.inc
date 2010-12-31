@@ -21,7 +21,7 @@ class activity_views_handler_argument_activity_user extends views_handler_argume
       '#type' => 'checkboxes',
       '#description' => t('Choose the realms to filter the Activity rows'),
       '#options' => $options,
-
+      '#required' => TRUE,
       '#default_value' => $this->options['realms'],
     );
   }
@@ -58,13 +58,22 @@ class activity_views_handler_argument_activity_user extends views_handler_argume
       $realm_values = array('activity_none' => 1);
     }
 
-    $grants = db_or();
-    foreach ($realm_values as $realm => $ids) {
-      $grants->condition(db_and()
-        ->condition($table . '.realm', $realm)
-        ->condition($table . '.value', $ids, 'IN'));
+    if (count($realm_values) > 1) {
+      $grants = db_or();
+      foreach ($realm_values as $realm => $ids) {
+        $grants->condition(db_and()
+          ->condition($table . '.realm', $realm)
+          ->condition($table . '.value', $ids, 'IN'));
+      }
+      $this->query->add_where('AND', $grants);
     }
-
-    $this->query->add_where('AND', $grants);
+    else {
+      $keys = array_keys($realm_values);
+      $realm = $keys[0];
+      $grants = db_and()
+        ->condition($table . '.realm', $realm)
+        ->condition($table . '.value', $realm_values[$realm]);
+      $this->query->add_where(0, $grants);
+    }
   }
 }
