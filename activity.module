@@ -300,6 +300,9 @@ function activity_recreate_messages(array $records) {
       if (isset($record->argument2)) {
         $a2 = unserialize($record->argument2);
       }
+
+      // If the handler is valid, create the new messages, otherwise delete the
+      // record of the activity.
       if ($handler->valid($record->eid, $record->uid, $record->created, $objects, $a1, $a2)) {
         activity_write_messages($handler->tokenize($objects), $record->aid);
       }
