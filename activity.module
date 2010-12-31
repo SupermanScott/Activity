@@ -702,6 +702,7 @@ function activity_theme($existing, $type, $theme, $path) {
  */
 function theme_activity_settings_actions_list($vars) {
   $header = array(t('Label'), t('Hook'), t('Operations'));
+  $hooks = activity_cache_get('hooks');
   foreach ($vars['results'] as $result) {
     $handler = activity_handler_load($result->aid);
     $operations = array(
@@ -716,7 +717,7 @@ function theme_activity_settings_actions_list($vars) {
 
     $rows[] = array(
       $result->label,
-      drupal_ucfirst(str_replace('_', ' ', $result->hook)),
+      $hooks[$result->hook]['name'],
       implode(' | ', $operations),
     );
   }
