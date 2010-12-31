@@ -561,14 +561,14 @@ class NodeActivityActionHandler extends ActivityActionHandler {
     // Because the op view currently isn't batchable, it can be skipped.
 
     $query = db_select('node', 'n')
-      ->fields('n', array('nid'), 'eid')
-      ->range($offset, $limit);
+      ->fields('n', array('nid'), 'eid');
     if (!empty($types)) {
       $query->condition('type', $types, 'IN');
     }
 
     $count_query = clone $query;
     $total = $count_query->countQuery()->execute()->fetchField();
+    $query->range($offset, $limit);
 
     $arguments = array();
     foreach ($query->execute()->fetchCol() as $eid) {
@@ -706,8 +706,7 @@ class CommentActivityActionHandler extends NodeActivityActionHandler {
     $types = array_filter($this->options['types']);
 
     $query = db_select('comment', 'c')
-      ->fields('c', array('cid'), 'eid')
-      ->range($offset, $limit);
+      ->fields('c', array('cid'), 'eid');
     if (!empty($types)) {
       $node_alias = $query->join('node', 'n', 'n.nid = c.nid');
       $query->condition($node_alias . '.type', $types, 'IN');
@@ -716,6 +715,7 @@ class CommentActivityActionHandler extends NodeActivityActionHandler {
     $count_query = clone $query;
     $total = $count_query->countQuery()->execute()->fetchField();
 
+    $query->range($offset, $limit);
     $arguments = array();
     foreach ($query->execute()->fetchCol() as $eid) {
       $arguments[$eid] = array(
