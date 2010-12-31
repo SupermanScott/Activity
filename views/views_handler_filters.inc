@@ -77,3 +77,17 @@ class activity_views_handler_filter_access extends views_handler_filter {
     }
   }
 }
+
+class activity_views_handler_filter_actions_id extends views_handler_filter_in_operator {
+  function get_value_options() {
+    if (!isset($this->value_options)) {
+      $this->value_title = t('Activity Template');
+      $results = db_query("SELECT aid, label FROM {actions} WHERE type = 'activity'")
+        ->fetchAllAssoc('aid');
+ 
+      foreach ($results as $actions_id => $row) {
+        $this->value_options[$actions_id] = check_plain($row->label);
+      }
+    }
+  }
+}

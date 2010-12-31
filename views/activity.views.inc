@@ -97,6 +97,14 @@ function activity_views_data() {
       'handler' => 'views_handler_sort',
     ),
   );
+
+  $data['activity']['actions_id'] = array(
+    'title' => t('Template'),
+    'help' => t('The template that produced the message'),
+    'filter' => array(
+      'handler' => 'activity_views_handler_filter_actions_id',
+    ),
+  );
   
   $data['activity_access']['table']['group'] = t('Activity Access');
   $data['activity_access']['table']['join'] = array(
@@ -272,6 +280,7 @@ function activity_views_handlers() {
     'activity_views_handler_filter_access',
     'activity_views_handler_filter_uid_access',
     'activity_views_handler_filter_operations',
+    'activity_views_handler_filter_actions_id',
 
     // Argument Handlers.
     'activity_views_handler_argument_activity_user',
