@@ -119,7 +119,7 @@ function activity_views_data() {
     
   $data['activity_access']['access_filter'] = array(
     'title' => t('Access Filters'),
-    'help' => t('Applies Activity Access control based on the selected realms and the context user'),
+    'help' => t('Applies Activity Access control based on the selected realms for the current user'),
     'filter' => array(
       'handler' => 'activity_views_handler_filter_access',
       'options callback' => 'activity_realm_options',
@@ -263,27 +263,4 @@ function activity_views_query_alter(&$view, &$query) {
   if ($query->get_table_info('activity_access')) {
     $query->set_distinct();
   }
-}
-
-/**
- * return the group id for the where clause
- */
-function activity_views_group($new_group = NULL) {
-  static $group_id = NULL;
-  if (isset($new_group)) {
-    $group_id = $new_group;
-  }
-  
-  return $group_id;
-}
-
-/**
- * Context getter setter for Activity Access
- */
-function activity_views_access_user($account = NULL) {
-  static $access_account = NULL;
-  if (!empty($account)) {
-    $access_account = $account;
-  }
-  return (empty($access_account) ? $GLOBALS['user'] : $access_account);
 }

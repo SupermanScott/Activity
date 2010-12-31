@@ -13,7 +13,7 @@
  */
 class activity_views_handler_filter_access extends views_handler_filter {  
   /**
-   * Tell Views UI this filter can't be exposed.
+   * Tell Views UI this filter can't be exposed, yet.
    */
   function can_expose() {
     return FALSE;
@@ -45,13 +45,22 @@ class activity_views_handler_filter_access extends views_handler_filter {
   }
 
   function query() {
-    module_load_include('inc', 'activity', 'modules/node.activity');
+    $table = $this->ensure_my_table();
     $allowed_realms = activity_cache_get('realms');
     $realm_values = array();
     foreach ($this->options['realms'] as $realm) {
       if (isset($allowed_realms[$realm])) {
-        $realm_values += module_invoke($allowed_realms[$realm]['module'], 'activity_access_grants', user_load(1));
+        $realm_values += module_invoke($allowed_realms[$realm]['module'], 'activity_access_grants', user_load($GLOBALS['user']->uid));
       }
     }
+
+    $grants = db_or();
+    foreach ($realm_values as $realm => $ids) {
+      $grants->condition(db_and()
+        ->condition($table . '.realm', $realm)
+        ->condition($table . '.value', $ids, 'IN'));
+    }
+
+    $this->query->add_where('AND', $grants);
   }
 }
