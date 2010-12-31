@@ -487,16 +487,27 @@ function user_activity_api() {
  *   count of records deleted.
  */
 function activity_delete($aids) {
-  $amids = db_query("SELECT amid FROM {activity_targets} WHERE aid IN (:aids)", array(':aids' => $aids))->fetchCol();
-  db_delete('activity_targets')
-    ->condition('amid', $amids, 'IN')
-    ->execute();
-  $count_messages = db_delete('activity_messages')
-    ->condition('amid', $amids, 'IN')
-    ->execute();
-  $count_activities = db_delete('activity')
-    ->condition('aid', $aids, 'IN')
-    ->execute();
+  $amids = array();
+  $count_activities = 0;
+  $count_messages = 0;
+  if (!empty($aids)) {
+    $amids = db_query("SELECT amid FROM {activity_targets} WHERE aid IN (:aids)", array(':aids' => $aids))->fetchCol();
+  }
+
+  if (!empty($amids)) {
+    db_delete('activity_targets')
+      ->condition('amid', $amids, 'IN')
+      ->execute();
+    $count_messages = db_delete('activity_messages')
+      ->condition('amid', $amids, 'IN')
+      ->execute();
+  }
+
+  if (!empty($aids)) {
+    $count_activities = db_delete('activity')
+      ->condition('aid', $aids, 'IN')
+      ->execute();
+  }
 
   return array('activities' => $count_activities, 'messages' => $count_messages);
 }
