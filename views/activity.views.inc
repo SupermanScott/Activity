@@ -263,4 +263,54 @@ function activity_views_query_alter(&$view, &$query) {
   if ($query->get_table_info('activity_access')) {
     $query->set_distinct();
   }
+  if ($query->get_table_info('activity')) {
+    $bypass_node_access = FALSE;
+
+    // If $GLOBALS['user'] can bypass node access, or there are no node access
+    // modules or $GLOBALS['user'] has a global view grant (i.e., a view grant
+    // for node ID 0), we don't need to alter the query.
+    if (user_access('bypass node access', $GLOBALS['user'])) {
+      $bypass_node_access = TRUE;
+    }
+    if (!count(module_implements('node_grants'))) {
+      $bypass_node_access = TRUE;
+    }
+    if (node_access_view_all_nodes($GLOBALS['user'])) {
+      $bypass_node_access = TRUE;
+    }
+
+    if (!$bypass_node_access) {
+      $query->set_distinct();
+
+      // Create a relationship to node_access so that it can be used properly.
+      $def = array(
+        'table' => 'node_access',
+        'field' => 'nid',
+        'left_table' => 'activity',
+        'left_field' => 'nid',
+      );
+      $join = new views_join();
+      $join->definition = $def;
+      $join->construct();
+      $join->adjusted = TRUE;
+
+      $table = $query->add_relationship('activity_node_access', $join, 'node_access');
+
+      $grants = db_or();
+      foreach (node_access_grants('view') as $realm => $gids) {
+        foreach ($gids as $gid) {
+          $grants->condition(db_and()
+            ->condition($table . '.gid', $gid)
+            ->condition($table . '.realm', $realm));
+        }
+      }
+
+      // Make it so the node_access is required when nid is there not required
+      // otherwise.
+      $final = db_or()
+        ->condition($table . '.nid', 'NULL')
+        ->condition($grants);
+      $query->add_where('AND', $final);
+    }
+  }
 }
