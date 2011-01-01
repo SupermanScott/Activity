@@ -1,0 +1,5 @@
+name = Activity comments
+description = "Allow users to comment on activities"
+core = 7.x
+dependencies[] = activity
+package = Activity

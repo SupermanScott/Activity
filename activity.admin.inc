@@ -1,5 +1,5 @@
 <?php
-// $Id: activity.admin.inc,v 1.1.2.41 2010/05/25 04:39:33 scottreynolds Exp $
+// $Id: $
 
 /**
  * @file activity.admin.inc

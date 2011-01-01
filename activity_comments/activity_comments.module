@@ -1,0 +1,303 @@
+<?php
+// $Id: activity_comments.module,v 1.1.2.2 2010/08/03 16:27:29 scottreynolds Exp $
+
+/**
+ * @file
+ * Provides comment handling for activity messages
+ */
+
+/**
+ * Implements hook_permission().
+ */
+function activity_comments_permission() {
+  return array(
+    'administer activity comments' => array(
+      'title' => t('administer activity comments'),
+      'description' => t('Be able to administer all Activity comments.'),
+    ),
+    'activity post comments' => array(
+      'title' => t('activity post comments'),
+      'description' => t('Ability to post comments on Activity messages.'),
+    ),
+    'activity comments delete own' => array(
+      'title' => t('activity comments delete own'),
+      'description' => t('Be able to delete their own comments.'),
+    ),
+  );
+}
+
+/**
+ * Implements hook_menu().
+ */
+function activity_comments_menu() {
+  $items['activity/comments/delete/%'] = array(
+    'title' => 'Delete activty comment',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('activity_comments_comment_delete', 3),
+    'access callback' => 'activity_comments_delete_access',
+    'access arguments' => array(3),
+    'type' => MENU_CALLBACK,
+  );
+  return $items;
+}
+
+/**
+ * Access callback to determine if you can delete the comment
+ */
+function activity_comments_delete_access($acid) {
+  if (user_access('administer activity comments')) {
+    return TRUE;
+  }
+  // quick query to determine if the uid is the same and
+  // if the user can delete comments
+  if (user_access('activity comments delete own')) {
+    $uid = db_query("SELECT uid FROM {activity_comments} WHERE cid = :cid", array(':cid' => $acid))->fetchField();
+    return ($uid == $GLOBALS['user']->uid);
+  }
+  return FALSE;
+}
+
+/**
+ * Delete comment form build
+ */
+function activity_comments_comment_delete($form, $form_state, $cid) {
+  $form['#cid'] = $cid;
+  $text = db_query("SELECT comment FROM {activity_comments} WHERE cid = :cid", array(':cid' => $cid))->fetchField();
+  $comment_text = truncate_utf8(check_plain($text), 30, TRUE, TRUE);
+  return confirm_form($form, t('Would you like to delete this comment: !comment', array('!comment' => $comment_text)), $_GET['destination']);
+}
+
+/**
+ * Form submit for the delete form
+ */
+function activity_comments_comment_delete_submit($form, &$form_state) {
+  db_delete('activity_comments')
+  ->condition('cid', $form['#cid'])
+  ->execute();
+}
+
+/**
+ * Add comment form.
+ */
+function activity_comments_form($form, $form_state, $aid, $limit, $direction) {
+  // This could overrided the #attached elements already in the form, consider
+  // doing $form['attached']['css'][] = drupal_get_path(....)
+  $form['#attached'] = array(
+    'css' => array(
+      drupal_get_path('module', 'activity_comments') . '/activity_comments.css',
+    ),
+    'js' => array(
+      drupal_get_path('module', 'activity_comments') . '/activity_comments.js',
+    ),
+  );
+  $form['activity_form_items'] = array(
+    '#access' => user_access('activity post comments'),
+    '#prefix' => '<div class="container-inline activity-comment-add clearfix">',
+    '#suffix' => '</div>',
+  );
+  $form['activity_form_items']['activity_comment'] = array(
+    '#type' => 'textarea',
+    '#rows' => 2,
+    '#resizable' => FALSE,
+    '#attributes' => array('class' => array('activity-comment-text')),
+    '#default_value' => t('Write a Comment'),
+  );
+  $form['aid'] = array(
+    '#type' => 'value',
+    '#value' => $aid,
+  );
+  $form['direction'] = array(
+    '#type' => 'value',
+    '#value' => $direction,
+  );
+  $form['activity_form_items']['activity_save_comment'] = array(
+    '#type' => 'submit',
+    '#value' => t('Add'),
+    '#ajax' => array(
+      'callback' => 'activity_comments_insert_ajax_callback',
+      'wrapper' => 'activity-comments-' . $aid,
+      'method' => 'replace',
+      'effect' => 'fade',
+      'keypress' => TRUE,
+    ),
+    '#id' => 'activity-comment-save-comment-' . $aid,
+  );
+
+  // fetch all the comments for this
+  $query = db_select('activity_comments', 'ac')
+    ->fields('ac', array(
+        'cid',
+        'comment',
+        'timestamp',
+        'uid',
+      ))
+    ->condition('ac.aid', $aid)
+    ->fields('u', array(
+        'name'))
+    ->orderBy('ac.timestamp', $direction);
+  $query->join('users', 'u', 'ac.uid = u.uid');
+  $items = $query->execute()
+    ->fetchAll();
+
+  // put all the comments into a markup for the form
+  $form['comments'] = array(
+    '#markup' => theme('activity_comments_comments', array('aid' => $aid, 'comments' => $items, 'limit' => $limit)),
+    '#weight' => -10,
+  );
+
+  // show all
+  $form['show_all'] = array(
+    '#prefix' => '<span class="activity-comment-show-all">',
+    '#markup' => '<a href="#">' . t('Show all !plural', array('!plural' => format_plural(count($items), '1 comment', '@count comments'))) . '</a>',
+    '#suffix' => '</span>',
+    '#weight' => -11,
+    '#access' => count($items) > $limit,
+  );
+
+  $form['#attributes'] = array('class' => 'activity_comment-comment-form');
+
+  // after build to add js
+  $form['#after_build'][] = 'activity_comments_add_js';
+  $form['#pre_render'][] = 'activity_comments_wrap';
+  return $form;
+}
+
+/**
+ * Implements hook_submit() for activity_comments_form().
+ */
+function activity_comments_form_submit($form, &$form_state) {
+  global $user;
+  // Store the activity comment.
+  $record = new stdClass;
+  $record->comment = $form_state['values']['activity_comment'];
+  $record->uid = $user->uid;
+  $record->aid = $form_state['values']['aid'];
+  $record->timestamp = REQUEST_TIME;
+  drupal_alter('activity_comment', $record);
+
+  // The alter could have set the record to NULL.
+  if (!empty($record)) {
+    drupal_write_record('activity_comments', $record);
+
+    $count = db_query('SELECT COUNT(cid) FROM {activity_comments} WHERE aid = :aid', array(
+               ':aid' => $record->aid))->fetchField();
+    if ($count > 0) {
+      db_update('activity_comments_stats')
+        ->fields(array(
+            'comment_count' => $count,
+            'changed' => REQUEST_TIME,
+          ))
+        ->condition('aid', $form['aid']['#value'])
+        ->execute();
+
+    }
+    else {
+      db_insert('activity_comments_stats')
+        ->fields(array(
+            'aid' => $form['aid']['#value'],
+            'changed' => REQUEST_TIME,
+            'comment_count' => 1,
+          ))
+        ->execute();
+    }
+  }
+  $form_state['rebuild'] = TRUE;
+}
+
+/**
+ * FAPI pre_render function
+ */
+function activity_comments_wrap($form) {
+  // Wrap the form so we can use ahah on it
+  $wrap['wrapper'] = array(
+    '#prefix' => '<div id="activity-comments-' . $form['aid']['#value'] . '" class="activity-comments-hide-comments">',
+    '#suffix' => '</div>',
+  );
+  return array_merge($wrap['wrapper'], $form);
+}
+
+/**
+ * After build function to add the js to the page
+ */
+function activity_comments_add_js($form, $form_state) {
+  static $js_added = FALSE;
+  if (!$js_added && $form_state['rebuild'] === FALSE) {
+    // set the settings for the default text as well
+    drupal_add_js(array('activity_comments' => array('destination' => drupal_get_destination())), array('type' => 'setting', 'scope' => JS_DEFAULT));
+    drupal_add_js(array('activity_comments' => array('default_text' => $form['activity_form_items']['activity_comment']['#default_value'])), array('type' => 'setting', 'scope' => JS_DEFAULT));
+    $js_added = TRUE;
+  }
+  return $form;
+}
+
+function activity_comments_insert_ajax_callback($form, $form_state) {
+  $key = array_search('activity_comments_add_js', $form['#pre_render']);
+  if ($key !== FALSE) {
+    unset($form['#pre_render'][$key]);
+  }
+  return $form;
+}
+
+/**
+ * Implements hook_views_api().
+ */
+function activity_comments_views_api() {
+  return array(
+    'api' => '3.0-alpha1',
+    'path' => drupal_get_path('module', 'activity_comments') . '/views',
+  );
+}
+
+/**
+ * Implements hook_theme().
+ */
+function activity_comments_theme($existing, $type, $theme, $path) {
+  return array(
+    'activity_comments_comments' =>  array(
+      'variables' => array('aid' => 0, 'comments' => array(), 'limit' => 10),
+    ),
+    'activity_comments_comment' =>  array(
+      'variables' => array('comment' => NULL),
+      'template' => 'activity-comment',
+    ),
+  );
+}
+
+/**
+ * Theme up all the comments
+ */
+function theme_activity_comments_comments($variables) {
+  $aid = $variables['aid'];
+  $comments = $variables['comments'];
+  $limit = $variables['limit'];
+  $items = array();
+  $count = 0;
+
+  foreach ($comments as $comment) {
+    $hide = (++$count > $limit);
+    $classes = array('activity-comment-wrapper');
+    if ($hide) {
+      $classes[] = 'activity-comment-hidden';
+    }
+    $items[] = array(
+      'data' => theme('activity_comments_comment', array('comment' => $comment)),
+      'class' => $classes,
+    );
+  }
+  return theme('item_list', array('items' => $items, 'title' => NULL, 'type' => 'ul', 'attributes' => array(
+      'id' => 'activity_comments-' . $aid,
+      'class' => 'activity-comment-list',
+    )));
+}
+
+/**
+ * Preprocess the comment display to add in the sanitized variables
+ */
+function template_preprocess_activity_comments_comment(&$vars, $hook) {
+  $vars['username'] = theme('username', array('account' => $vars['comment']));
+  $vars['comment_value'] = check_markup($vars['comment']->comment);
+  $vars['date'] = format_date($vars['comment']->timestamp);
+  if (activity_comments_delete_access($vars['comment']->cid)) {
+    $vars['delete_link'] = l(t('Delete'), 'activity/comments/delete/' . $vars['comment']->cid, array('query' => drupal_get_destination()));
+  }
+}
