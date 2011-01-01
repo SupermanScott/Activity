@@ -7,6 +7,16 @@
  */
 
 /**
+ * Activity is not published.
+ */
+define('ACTIVITY_NOT_PUBLISHED', 0);
+
+/**
+ * Activity is published.
+ */
+define('ACTIVITY_PUBLISHED', 1);
+
+/**
  * Implements hook_menu().
  */
 function activity_menu() {
@@ -243,7 +253,7 @@ function activity_save_activity(ActivityActionHandler $handler, $eid, $a1, $a2) 
       'actions_id' => $handler->actions_id,
       'argument1' => $argument1,
       'argument2' => $argument2,
-      'status' => $handler->isPublished($objects, $uid) ? 1 : 0,
+      'status' => $handler->isPublished($objects, $uid) ? ACTIVITY_PUBLISHED : ACTIVITY_NOT_PUBLISHED,
     );
     $record = (object) $record;
     drupal_alter('activity_record', $record, $handler);
@@ -355,7 +365,7 @@ function activity_update_status($activity_records) {
   $updated_activity = array();
 
   foreach ($activity_records as $record) {
-    $status = 1;
+    $status = ACTIVITY_PUBLISHED;
 
     // Figure out if the status should be 1 or 0.
     $handler = activity_handler_load($record->actions_id);
@@ -363,7 +373,7 @@ function activity_update_status($activity_records) {
     drupal_alter('activity_objects', $objects, $handler->type);
 
     if (!$handler->isPublished($objects, $record->uid)) {
-      $status = 0;
+      $status = ACTIVITY_NOT_PUBLISHED;
     }
 
     $updated_activity[$status][] = $record->aid;
