@@ -754,20 +754,78 @@ function theme_activity_settings_actions_list($vars) {
  * This allows us to theme the username separately for activity feeds then the
  * rest of the site.
  */
-function theme_activity_username($vars) {
-  if ($vars['object']->uid && $vars['object']->name) {
-    // Shorten the name when it is too long or it will break many tables.
-    if (drupal_strlen($vars['object']->name) > 20) {
-      $name = drupal_substr($vars['object']->name, 0, 15) .'...';
-    }
-    else {
-      $name = $vars['object']->name;
-    }
-     $output = l($name, 'user/'. $vars['object']->uid, array('attributes' => array('title' => t('View user profile.'))));
+function theme_activity_username($variables) {
+  if (isset($variables['link_path'])) {
+    // We have a link path, so we should generate a link using l().
+    // Additional classes may be added as array elements like
+    // $variables['link_options']['attributes']['class'][] = 'myclass';
+    $output = l($variables['name'] . $variables['extra'], $variables['link_path'], $variables['link_options']);
   }
   else {
-    $output = check_plain(variable_get('anonymous', t('Anonymous')));
+    // Modules may have added important attributes so they must be included
+    // in the output. Additional classes may be added as array elements like
+    // $variables['attributes_array']['class'][] = 'myclass';
+    $output = '<span' . drupal_attributes($variables['attributes_array']) . '>' . $variables['name'] . $variables['extra'] . '</span>';
+  }
+  return $output;
+}
+
+function template_preprocess_activity_username($variables) {
+  $account = $variables['account'];
+
+  $variables['extra'] = '';
+  if (empty($account->uid)) {
+    $variables['uid'] = 0;
+  }
+  else {
+    $variables['uid'] = (int) $account->uid;
   }
 
-  return $output;
+  // Set the name to a formatted name that is safe for printing and
+  // that won't break tables by being too long. Keep an unshortened,
+  // unsanitized version, in case other preprocess functions want to implement
+  // their own shortening logic or add markup. If they do so, they must ensure
+  // that $variables['name'] is safe for printing.
+  $name = $variables['name_raw'] = format_username($account);
+  if (drupal_strlen($name) > 20) {
+    $name = drupal_substr($name, 0, 15) . '...';
+  }
+  $variables['name'] = check_plain($name);
+
+  $variables['profile_access'] = TRUE;
+  $variables['link_attributes'] = array();
+  // Populate link path and attributes if appropriate.
+  if ($variables['uid'] && $variables['profile_access']) {
+    // We are linking to a local user.
+    $variables['link_attributes'] = array('title' => t('View user profile.'));
+    $variables['link_path'] = 'user/' . $variables['uid'];
+  }
+  elseif (!empty($account->homepage)) {
+    // Like the 'class' attribute, the 'rel' attribute can hold a
+    // space-separated set of values, so initialize it as an array to make it
+    // easier for other preprocess functions to append to it.
+    $variables['link_attributes'] = array('rel' => array('nofollow'));
+    $variables['link_path'] = $account->homepage;
+    $variables['homepage'] = $account->homepage;
+  }
+  // We do not want the l() function to check_plain() a second time.
+  $variables['link_options']['html'] = TRUE;
+  // Set a default class.
+  $variables['attributes_array'] = array('class' => array('username'));
+}
+
+function template_process_activity_username(&$variables) {
+  // Finalize the link_options array for passing to the l() function.
+  // This is done in the process phase so that attributes may be added by
+  // modules or the theme during the preprocess phase.
+  if (isset($variables['link_path'])) {
+    // $variables['attributes_array'] contains attributes that should be applied
+    // regardless of whether a link is being rendered or not.
+    // $variables['link_attributes'] contains attributes that should only be
+    // applied if a link is being rendered. Preprocess functions are encouraged
+    // to use the former unless they want to add attributes on the link only.
+    // If a link is being rendered, these need to be merged. Some attributes are
+    // themselves arrays, so the merging needs to be recursive.
+    $variables['link_options']['attributes'] = array_merge_recursive($variables['link_attributes'], $variables['attributes_array']);
+  }
 }

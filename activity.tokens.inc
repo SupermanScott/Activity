@@ -38,7 +38,7 @@ function activity_tokens($type, $tokens, array $data = array(), array $options =
     foreach ($tokens as $name => $original) {
       switch ($name) {
         case 'activity-profile-link':
-          $replacements[$original] = theme('activity_username', array('object' => $data['user']));
+          $replacements[$original] = theme('activity_username', array('account' => $data['user']));
           break;
       }
     }
