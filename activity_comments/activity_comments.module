@@ -221,9 +221,15 @@ function activity_comments_wrap($form) {
  */
 function activity_comments_add_js($form, $form_state) {
   static $js_added = FALSE;
-  if (!$js_added && $form_state['rebuild'] === FALSE) {
+
+  // rebuild_info is an array of stuff for internal FAPI. It can be non-empty
+  // and $form_state['rebuild'] = FALSE. (i.e. when it is first submitted and
+  // being pulled from the form_cache. That is why this uses that as a check
+  // instead of $form_state['rebuild'].
+  if (!$js_added && empty($form_state['rebuild_info'])) {
     // set the settings for the default text as well
-    drupal_add_js(array('activity_comments' => array('destination' => drupal_get_destination())), array('type' => 'setting', 'scope' => JS_DEFAULT));
+    $destination = drupal_get_destination();
+    drupal_add_js(array('activity_comments' => array('destination' => drupal_http_build_query($destination))), array('type' => 'setting', 'scope' => JS_DEFAULT));
     drupal_add_js(array('activity_comments' => array('default_text' => $form['activity_form_items']['activity_comment']['#default_value'])), array('type' => 'setting', 'scope' => JS_DEFAULT));
     $js_added = TRUE;
   }
