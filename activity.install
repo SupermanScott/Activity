@@ -29,7 +29,7 @@ function activity_schema() {
         'unsigned' => TRUE,
       ),
       'type' => array(
-        'description' => 'The type of object being acted upon (node, user, etc.)',
+        'description' => 'The hook that created this activity.',
         'type' => 'varchar',
         'length' => '50',
         'not null' => TRUE,
