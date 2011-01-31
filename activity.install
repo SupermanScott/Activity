@@ -260,7 +260,8 @@ function activity_update_6203() {
  */
 function activity_update_7300() {
   db_query("UPDATE {activity} SET type = CONCAT(type, '_', op)");
-  drop_field('activity', 'op');
+
+  drupal_set_message(t('Updated the {activity}.type field by combining it with the op field. In the event that this doesn\'t map properly for some activities, the op field remains for historical purposes only'), 'warning');
 
   $new_fields = array(
     'argument1' => array(
