@@ -236,3 +236,48 @@ function activity_update_6201() {
   db_change_field($ret, 'activity_messages', 'amid', 'amid', array('type' => 'serial', 'unsigned' => TRUE, 'not null' => TRUE));
   return $ret;
 }
+
+/**
+ * Update {activity} table to have a status field
+ * @see: http://drupal.org/node/582230
+ */
+function activity_update_6203() {
+  $ret = array();
+
+  db_add_field ($ret, 'activity', 'status', array(
+      'description' => 'Whether or not this Activity is published',
+      'type' => 'int',
+      'size' => 'tiny',
+      'default' => 1,
+    )
+ );
+
+  return $ret;
+}
+
+/**
+ * Upgrade from Drupal 6 to Drupal 7
+ */
+function activity_update_7300() {
+  db_query("UPDATE {activity} SET type = CONCAT(type, '_', op)");
+  drop_field('activity', 'op');
+
+  $new_fields = array(
+    'argument1' => array(
+      'description' => 'Serialized value of first argument passed to the actions callback',
+      'type' => 'text',
+      'size' => 'big',
+      'default' => NULL,
+    ),
+    'argument2' => array(
+      'description' => 'Serialized value of second argument passed to the actions callback',
+      'type' => 'text',
+      'size' => 'big',
+      'default' => NULL,
+    ),
+  );
+
+  foreach ($new_fields as $field_name => $field_def) {
+    db_add_field('activity', $field_name, $field_def);
+  }
+}
