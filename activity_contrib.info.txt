@@ -1,0 +1,8 @@
+; Id: $
+name = Activity Contrib
+description = "Activity integration for various contrib modules."
+core = 7.x
+dependencies[] = activity
+package = Activity
+files[] = activity_contrib_action_handlers.inc
+; @TODO: add unit tests.
